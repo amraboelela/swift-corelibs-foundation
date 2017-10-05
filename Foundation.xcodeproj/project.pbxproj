@@ -9,6 +9,9 @@
 /* Begin PBXBuildFile section */
 		0383A1751D2E558A0052E5D1 /* TestStream.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0383A1741D2E558A0052E5D1 /* TestStream.swift */; };
 		03B6F5841F15F339004F25AF /* TestURLProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03B6F5831F15F339004F25AF /* TestURLProtocol.swift */; };
+		0C4B5BA01F79AFD800650453 /* build.py in Resources */ = {isa = PBXBuildFile; fileRef = 0C4B5B9D1F79AFD800650453 /* build.py */; };
+		0C4B5BA11F79AFD800650453 /* configure in Resources */ = {isa = PBXBuildFile; fileRef = 0C4B5B9E1F79AFD800650453 /* configure */; };
+		0C4B5BA21F79AFD800650453 /* build-android in Resources */ = {isa = PBXBuildFile; fileRef = 0C4B5B9F1F79AFD800650453 /* build-android */; };
 		1520469B1D8AEABE00D02E36 /* HTTPServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1520469A1D8AEABE00D02E36 /* HTTPServer.swift */; };
 		159884921DCC877700E3314C /* TestHTTPCookieStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 159884911DCC877700E3314C /* TestHTTPCookieStorage.swift */; };
 		231503DB1D8AEE5D0061694D /* TestDecimal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 231503DA1D8AEE5D0061694D /* TestDecimal.swift */; };
@@ -487,6 +490,9 @@
 /* Begin PBXFileReference section */
 		0383A1741D2E558A0052E5D1 /* TestStream.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TestStream.swift; sourceTree = "<group>"; };
 		03B6F5831F15F339004F25AF /* TestURLProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestURLProtocol.swift; sourceTree = "<group>"; };
+		0C4B5B9D1F79AFD800650453 /* build.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = build.py; sourceTree = "<group>"; };
+		0C4B5B9E1F79AFD800650453 /* configure */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = configure; sourceTree = "<group>"; };
+		0C4B5B9F1F79AFD800650453 /* build-android */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = "build-android"; sourceTree = "<group>"; };
 		1520469A1D8AEABE00D02E36 /* HTTPServer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HTTPServer.swift; sourceTree = "<group>"; };
 		159884911DCC877700E3314C /* TestHTTPCookieStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestHTTPCookieStorage.swift; sourceTree = "<group>"; };
 		22B9C1E01C165D7A00DECFF9 /* TestDate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TestDate.swift; sourceTree = "<group>"; };
@@ -1007,6 +1013,9 @@
 			isa = PBXGroup;
 			children = (
 				B167A6641ED7303F0040B09A /* README.md */,
+				0C4B5B9F1F79AFD800650453 /* build-android */,
+				0C4B5B9D1F79AFD800650453 /* build.py */,
+				0C4B5B9E1F79AFD800650453 /* configure */,
 				5BDC3F2C1BCC5DB500ED97BB /* Foundation */,
 				EAB57B681BD1A255004AC5C5 /* CoreFoundation */,
 				EA66F65B1BF2DF3200136161 /* Bootstrap */,
@@ -2084,6 +2093,9 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0C4B5BA01F79AFD800650453 /* build.py in Resources */,
+				0C4B5BA11F79AFD800650453 /* configure in Resources */,
+				0C4B5BA21F79AFD800650453 /* build-android in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

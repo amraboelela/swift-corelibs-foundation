@@ -28,6 +28,10 @@ open class Host: NSObject {
     internal var _names = [String]()
     internal var _addresses = [String]()
     
+    #if os(Android)
+        static internal let NI_MAXHOST = 1025
+    #endif
+    
     static internal let _current = Host(currentHostName(), .current)
     
     internal init(_ info: String?, _ type: ResolveType) {
@@ -36,7 +40,7 @@ open class Host: NSObject {
     }
     
     static internal func currentHostName() -> String {
-        let hname = UnsafeMutablePointer<Int8>.allocate(capacity: Int(NI_MAXHOST))
+       let hname = UnsafeMutablePointer<Int8>.allocate(capacity: Int(NI_MAXHOST))
         defer {
             hname.deinitialize()
             hname.deallocate(capacity: Int(NI_MAXHOST))
@@ -65,6 +69,9 @@ open class Host: NSObject {
     }
     
     internal func _resolveCurrent() {
+        #if os(Android)
+        return
+        #else
         var ifaddr: UnsafeMutablePointer<ifaddrs>? = nil
         if getifaddrs(&ifaddr) != 0 {
             return
@@ -88,9 +95,13 @@ open class Host: NSObject {
             }
             ifa = ifaValue.ifa_next
         }
+        #endif
     }
     
     internal func _resolve() {
+#if os(Android)
+    return
+#else
         if _resolved {
             return
         }
@@ -148,7 +159,7 @@ open class Host: NSObject {
                 res = info.ai_next
             }
         }
-        
+#endif   
     }
     
     open var name: String? {
