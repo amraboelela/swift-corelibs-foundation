@@ -93,7 +93,9 @@ if [ ! -f libFoundation.so ]; then
                 # Search path for curl seems to be wrong in foundation
                 #cp -r .build/openssl-1.0.2l/ssl $ANDROID_STANDALONE_SYSROOT/usr/include
                 cp -r .build/curl/include/curl $ANDROID_STANDALONE_SYSROOT/usr/include
-                ln -s $ANDROID_STANDALONE_SYSROOT/usr/include/curl $ANDROID_STANDALONE_SYSROOT/usr/include/curl/curl
+                if [ ! -e $ANDROID_STANDALONE_SYSROOT/usr/include/curl/curl ]; then
+                    ln -s $ANDROID_STANDALONE_SYSROOT/usr/include/curl $ANDROID_STANDALONE_SYSROOT/usr/include/curl/curl
+                fi
                 ln -s $ANDROID_STANDALONE_SYSROOT/usr/include/libxml2/libxml $ANDROID_STANDALONE_SYSROOT/usr/include/libxml
  
                 env \
