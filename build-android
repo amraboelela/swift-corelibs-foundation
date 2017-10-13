@@ -96,7 +96,9 @@ if [ ! -f libFoundation.so ]; then
                 if [ ! -e $ANDROID_STANDALONE_SYSROOT/usr/include/curl/curl ]; then
                     ln -s $ANDROID_STANDALONE_SYSROOT/usr/include/curl $ANDROID_STANDALONE_SYSROOT/usr/include/curl/curl
                 fi
-                ln -s $ANDROID_STANDALONE_SYSROOT/usr/include/libxml2/libxml $ANDROID_STANDALONE_SYSROOT/usr/include/libxml
+                if [ ! -e $ANDROID_STANDALONE_SYSROOT/usr/include/libxml ]; then
+                    ln -s $ANDROID_STANDALONE_SYSROOT/usr/include/libxml2/libxml $ANDROID_STANDALONE_SYSROOT/usr/include/libxml
+                fi
  
                 env \
                     SWIFTC="$SWIFT_ANDROID_BUILD_PATH/swift-linux-x86_64/bin/swiftc" \
@@ -118,10 +120,10 @@ if [ ! -f libFoundation.so ]; then
                         -DLIBDISPATCH_BUILD_DIR=$SWIFT_PATH/swift-corelibs-libdispatch &&
 
                 cp -r /usr/include/uuid $ANDROID_STANDALONE_SYSROOT/usr/include 
-                sed -ie "s/-I.\/ -I\/usr\/include\/x86_64-linux-gnu  -I\/usr\/include\/x86_64-linux-gnu    -I\/usr\/include\/libxml2//" build.ninja
-                sed -ie "s/-licui18n/-licui18nswift/g" build.ninja
-                sed -ie "s/-licuuc/-licuucswift/g" build.ninja
-                sed -ie "s/-licudata/-licudataswift/g" build.ninja
+                sed -i~ "s/-I.\/ -I\/usr\/include\/x86_64-linux-gnu  -I\/usr\/include\/x86_64-linux-gnu    -I\/usr\/include\/libxml2//" build.ninja
+                sed -i~ "s/-licui18n/-licui18nswift/g" build.ninja
+                sed -i~ "s/-licuuc/-licuucswift/g" build.ninja
+                sed -i~ "s/-licudata/-licudataswift/g" build.ninja
 
                 ninja || exit 1
 		
