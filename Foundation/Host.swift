@@ -28,9 +28,9 @@ open class Host: NSObject {
     internal var _names = [String]()
     internal var _addresses = [String]()
     
-    #if os(Android)
-        static internal let NI_MAXHOST = 1025
-    #endif
+#if os(Android)
+    static internal let NI_MAXHOST = 1025
+#endif
     
     static internal let _current = Host(currentHostName(), .current)
     
@@ -69,9 +69,9 @@ open class Host: NSObject {
     }
     
     internal func _resolveCurrent() {
-        #if os(Android)
+#if os(Android)
         return
-        #else
+#else
         var ifaddr: UnsafeMutablePointer<ifaddrs>? = nil
         if getifaddrs(&ifaddr) != 0 {
             return
@@ -95,12 +95,12 @@ open class Host: NSObject {
             }
             ifa = ifaValue.ifa_next
         }
-        #endif
+#endif
     }
     
     internal func _resolve() {
 #if os(Android)
-    return
+        return
 #else
         if _resolved {
             return

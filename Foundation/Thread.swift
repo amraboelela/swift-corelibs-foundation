@@ -43,6 +43,9 @@ internal enum _NSThreadStatus {
 private func NSThreadStart(_ context: UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? {
     let thread: Thread = NSObject.unretainedReference(context!)
     Thread._currentThread.set(thread)
+    if let name = thread.name {
+        _CFThreadSetName(pthread_self(), name)
+    }
     thread._status = .executing
     thread.main()
     thread._status = .finished
@@ -141,11 +144,12 @@ open class Thread : NSObject {
     }
 
     internal var _main: () -> Void = {}
-#if os(OSX) || os(iOS) || CYGWIN
-    private var _thread: pthread_t? = nil
-#elseif os(Linux) || os(Android)
+#if os(Android)
     private var _thread = pthread_t()
+#else
+    private var _thread: pthread_t? = nil
 #endif
+
 #if CYGWIN
     internal var _attr : pthread_attr_t? = nil
 #else
@@ -202,8 +206,8 @@ open class Thread : NSObject {
 
     open var name: String? {
         didSet {
-            if _thread == Thread.current._thread {
-                _CFThreadSetName(name)
+            if let thread = _thread {
+                _CFThreadSetName(thread, name ?? "" )
             }
         }
     }
@@ -256,11 +260,11 @@ open class Thread : NSObject {
         let maxSupportedStackDepth = 128;
         let addrs = UnsafeMutablePointer<UnsafeMutableRawPointer?>.allocate(capacity: maxSupportedStackDepth)
         defer { addrs.deallocate(capacity: maxSupportedStackDepth) }
-        #if os(Android)
-        let count = maxSupportedStackDepth
-        #else
+#if os(Android)
+        let count = 0
+#else
         let count = backtrace(addrs, Int32(maxSupportedStackDepth))
-        #endif
+#endif
         let addressCount = max(0, min(Int(count), maxSupportedStackDepth))
         return body(addrs, addressCount)
     }
@@ -274,9 +278,9 @@ open class Thread : NSObject {
     }
 
     open class var callStackSymbols: [String] {
-        #if os(Android)
-            return []
-        #else
+#if os(Android)
+        return []
+#else
         return backtraceAddresses({ (addrs, count) in
             var symbols: [String] = []
             if let bs = backtrace_symbols(addrs, Int32(count)) {
@@ -290,7 +294,7 @@ open class Thread : NSObject {
             }
             return symbols
         })
-        #endif
+#endif
     }
 }
 

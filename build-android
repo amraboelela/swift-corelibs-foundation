@@ -12,8 +12,7 @@
 
 set -e
 
-cd "$(dirname $0)/.." || exit 1
-SWIFT_PATH=$PWD
+SWIFT_PATH="$( cd "$(dirname $0)/.." && pwd )" 
 
 ANDROID_NDK_PATH="${ANDROID_NDK_PATH:?Please set the Android NDK path in the ANDROID_NDK_PATH environment variable}"
 ANDROID_ICU_PATH=${SWIFT_PATH}/libiconv-libicu-android
@@ -69,8 +68,8 @@ if [ ! -f $ANDROID_STANDALONE_SYSROOT/usr/lib/libxml2.so ]; then
     pushd libxml2
         autoreconf -i
         ./configure --with-sysroot=$ANDROID_STANDALONE_SYSROOT --with-zlib=$ANDROID_STANDALONE_SYSROOT/usr --prefix=$ANDROID_STANDALONE_SYSROOT/usr --host=$CHOST --without-lzma --disable-static --enable-shared --without-http --without-html --without-ftp
-        make libxml2.la || exit 1
-        make install-libLTLIBRARIES || exit 1
+        make libxml2.la 
+        make install-libLTLIBRARIES 
         pushd include
             make install
         popd
@@ -125,7 +124,7 @@ if [ ! -f libFoundation.so ]; then
                 sed -i~ "s/-licuuc/-licuucswift/g" build.ninja
                 sed -i~ "s/-licudata/-licudataswift/g" build.ninja
 
-                ninja || exit 1
+                ninja 
 		
                 # There's no installation script for foundation yet, so the installation needs to be done manually.
                 # Apparently the installation for the main script is in swift repo.
@@ -137,7 +136,6 @@ if [ ! -f libFoundation.so ]; then
                 cp -r $SWIFT_PATH/swift-corelibs-foundation/.build/curl/include/curl $SWIFT_ANDROID_TOOLCHAIN_PATH/usr/lib/swift
             popd
         popd
-
     popd
 fi
 
