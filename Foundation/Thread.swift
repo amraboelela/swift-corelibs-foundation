@@ -208,7 +208,7 @@ open class Thread : NSObject {
         didSet {
 #if os(Android)
             if _thread == Thread.current._thread {
-                _CFThreadSetName(_thread, name)
+                _CFThreadSetName(_thread, name ?? "")
             }
 #else
             if let thread = _thread {
