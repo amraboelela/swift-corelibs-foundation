@@ -206,9 +206,15 @@ open class Thread : NSObject {
 
     open var name: String? {
         didSet {
+#if os(Android)
+            if _thread == Thread.current._thread {
+                _CFThreadSetName(name)
+            }
+#else
             if let thread = _thread {
                 _CFThreadSetName(thread, name ?? "" )
             }
+#endif
         }
     }
 
