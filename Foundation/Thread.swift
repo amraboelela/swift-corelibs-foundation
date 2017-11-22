@@ -144,11 +144,11 @@ open class Thread : NSObject {
     }
 
     internal var _main: () -> Void = {}
-#if os(Android)
-    private var _thread = pthread_t()
-#else
+//#if os(Android)
+//    private var _thread = pthread_t()
+//#else
     private var _thread: pthread_t? = nil
-#endif
+//#endif
 
 #if CYGWIN
     internal var _attr : pthread_attr_t? = nil
@@ -206,15 +206,15 @@ open class Thread : NSObject {
 
     open var name: String? {
         didSet {
-#if os(Android)
-            if _thread == Thread.current._thread {
-                _CFThreadSetName(_thread, name ?? "")
-            }
-#else
+//#if os(Android)
+//            if _thread == Thread.current._thread {
+//                _CFThreadSetName(_thread, name ?? "")
+//            }
+//#else
             if let thread = _thread {
                 _CFThreadSetName(thread, name ?? "" )
             }
-#endif
+//#endif
         }
     }
 
