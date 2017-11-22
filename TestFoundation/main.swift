@@ -22,10 +22,6 @@ import SwiftXCTest
 #endif
 
 
-internal func testBundle() -> Bundle {
-    return Bundle.main
-}
-
 // ignore SIGPIPE which is sent when writing to closed file descriptors.
 _ = signal(SIGPIPE, SIG_IGN)
 
@@ -71,6 +67,7 @@ XCTMain([
     testCase(TestPipe.allTests),
     testCase(TestNSPredicate.allTests),
     testCase(TestProcessInfo.allTests),
+    testCase(TestHost.allTests),
     testCase(TestPropertyListSerialization.allTests),
     testCase(TestNSRange.allTests),
     testCase(TestNSRegularExpression.allTests),

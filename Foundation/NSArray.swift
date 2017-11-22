@@ -148,7 +148,7 @@ open class NSArray : NSObject, NSCopying, NSMutableCopying, NSSecureCoding, NSCo
         buffer.initialize(from: optionalArray, count: cnt)
         self.init(objects: buffer, count: cnt)
         buffer.deinitialize(count: cnt)
-        buffer.deallocate(capacity: cnt)
+        buffer.deallocate()
     }
 
     open override func isEqual(_ value: Any?) -> Bool {
@@ -404,7 +404,7 @@ open class NSArray : NSObject, NSCopying, NSMutableCopying, NSSecureCoding, NSCo
             }
         }
         return Data(bytesNoCopy: buffer, count: size, deallocator: .custom({ (_, _) in
-            buffer.deallocate(capacity: size)
+            buffer.deallocate()
         }))
     }
     
@@ -717,7 +717,17 @@ open class NSMutableArray : NSArray {
     }
 
     open func insert(_ objects: [Any], at indexes: IndexSet) {
-        NSUnimplemented()
+        precondition(objects.count == indexes.count)
+        
+        if type(of: self) === NSMutableArray.self {
+            _storage.reserveCapacity(count + indexes.count)
+        }
+        
+        var objectIdx = 0
+        for insertionIndex in indexes {
+            self.insert(objects[objectIdx], at: insertionIndex)
+            objectIdx += 1
+        }
     }
 
     open func removeLastObject() {
@@ -878,27 +888,13 @@ open class NSMutableArray : NSArray {
         }
     }
     
-    open func insertObjects(_ objects: [Any], atIndexes indexes: IndexSet) {
-        precondition(objects.count == indexes.count)
-        
-        if type(of: self) === NSMutableArray.self {
-            _storage.reserveCapacity(count + indexes.count)
-        }
-
-        var objectIdx = 0
-        for insertionIndex in indexes {
-            self.insert(objects[objectIdx], at: insertionIndex)
-            objectIdx += 1
-        }
-    }
-    
     open func removeObjects(at indexes: IndexSet) {
         for range in indexes.rangeView.reversed() {
             self.removeObjects(in: NSMakeRange(range.lowerBound, range.upperBound - range.lowerBound))
         }
     }
     
-    open func replaceObjects(at indexes: IndexSet, withObjects objects: [Any]) {
+    open func replaceObjects(at indexes: IndexSet, with objects: [Any]) {
         var objectIndex = 0
         for countedRange in indexes.rangeView {
             let range = NSMakeRange(countedRange.lowerBound, countedRange.upperBound - countedRange.lowerBound)

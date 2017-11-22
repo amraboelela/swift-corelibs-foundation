@@ -98,10 +98,10 @@ else:
 		'-lcurl ',
 		'-lxml2 ',
 	])
-	swift_cflags += ''.join([
-		'-I${SYSROOT}/usr/include/curl ',
-		'-I${SYSROOT}/usr/include/libxml2 ',
-	])
+	swift_cflags += [
+		'-I${SYSROOT}/usr/include/curl',
+		'-I${SYSROOT}/usr/include/libxml2',
+	]
 
 triple = Configuration.current.target.triple
 if triple == "armv7-none-linux-androideabi":
@@ -424,17 +424,17 @@ swift_sources = CompileSwiftSources([
 	'Foundation/NSURLRequest.swift',
 	'Foundation/URLResponse.swift',
 	'Foundation/URLSession/Configuration.swift',
-	'Foundation/URLSession/http/EasyHandle.swift',
+	'Foundation/URLSession/libcurl/EasyHandle.swift',
 	'Foundation/URLSession/http/HTTPBodySource.swift',
 	'Foundation/URLSession/http/HTTPMessage.swift',
-	'Foundation/URLSession/http/MultiHandle.swift',
+	'Foundation/URLSession/libcurl/MultiHandle.swift',
 	'Foundation/URLSession/URLSession.swift',
 	'Foundation/URLSession/URLSessionConfiguration.swift',
 	'Foundation/URLSession/URLSessionDelegate.swift',
 	'Foundation/URLSession/URLSessionTask.swift',
 	'Foundation/URLSession/TaskRegistry.swift',
 	'Foundation/URLSession/http/TransferState.swift',
-	'Foundation/URLSession/http/libcurlHelpers.swift',
+	'Foundation/URLSession/libcurl/libcurlHelpers.swift',
     'Foundation/URLSession/http/HTTPURLProtocol.swift',
 	'Foundation/UserDefaults.swift',
 	'Foundation/NSUUID.swift',

@@ -29,11 +29,16 @@ class TestHTTPCookieStorage: XCTestCase {
             ("test_BasicStorageAndRetrieval", test_BasicStorageAndRetrieval),
             ("test_deleteCookie", test_deleteCookie),
             ("test_removeCookies", test_removeCookies),
-            ("test_setCookiesForURL", test_setCookiesForURL),
-            ("test_getCookiesForURL", test_getCookiesForURL),
-            ("test_setCookiesForURLWithMainDocumentURL", test_setCookiesForURLWithMainDocumentURL),
+            ("test_cookiesForURL", test_cookiesForURL),
+            ("test_cookiesForURLWithMainDocumentURL", test_cookiesForURLWithMainDocumentURL),
             ("test_cookieInXDGSpecPath", test_cookieInXDGSpecPath),
         ]
+    }
+
+    override func setUp() {
+        // Delete any cookies in the storage
+        getStorage(for: .shared).removeCookies(since: Date(timeIntervalSince1970: 0))
+        getStorage(for: .groupContainer("test")).removeCookies(since: Date(timeIntervalSince1970: 0))
     }
 
     func test_sharedCookieStorageAccessedFromMultipleThreads() {
@@ -72,17 +77,15 @@ class TestHTTPCookieStorage: XCTestCase {
         removeCookies(with: .groupContainer("test"))
     }
 
-    func test_setCookiesForURL() {
+    func test_cookiesForURL() {
         setCookiesForURL(with: .shared)
-        setCookiesForURL(with: .groupContainer("test"))
-    }
-
-    func test_getCookiesForURL() {
         getCookiesForURL(with: .shared)
+
+        setCookiesForURL(with: .groupContainer("test"))
         getCookiesForURL(with: .groupContainer("test"))
     }
 
-    func test_setCookiesForURLWithMainDocumentURL() {
+    func test_cookiesForURLWithMainDocumentURL() {
         setCookiesForURLWithMainDocumentURL(with: .shared)
         setCookiesForURLWithMainDocumentURL(with: .groupContainer("test"))
     }
@@ -109,6 +112,7 @@ class TestHTTPCookieStorage: XCTestCase {
 
         storage.setCookie(simpleCookie)
         XCTAssertEqual(storage.cookies!.count, 0)
+        XCTAssertEqual(storage.description, "<NSHTTPCookieStorage cookies count:0>")
 
         let simpleCookie0 = HTTPCookie(properties: [   //no expiry date
            .name: "TestCookie1",
@@ -119,6 +123,7 @@ class TestHTTPCookieStorage: XCTestCase {
 
         storage.setCookie(simpleCookie0)
         XCTAssertEqual(storage.cookies!.count, 1)
+        XCTAssertEqual(storage.description, "<NSHTTPCookieStorage cookies count:1>")
 
         let simpleCookie1 = HTTPCookie(properties: [
            .name: "TestCookie1",
@@ -139,6 +144,7 @@ class TestHTTPCookieStorage: XCTestCase {
 
         storage.setCookie(simpleCookie2)
         XCTAssertEqual(storage.cookies!.count, 2)
+        XCTAssertEqual(storage.description, "<NSHTTPCookieStorage cookies count:2>")
     }
 
     func deleteCookie(with storageType: _StorageType) {
@@ -159,9 +165,11 @@ class TestHTTPCookieStorage: XCTestCase {
             .expires: Date(timeIntervalSince1970: Date().timeIntervalSince1970 + 1000)
             ])!
         storage.setCookie(simpleCookie)
+        storage.setCookie(simpleCookie2)
         XCTAssertEqual(storage.cookies!.count, 2)
 
         storage.deleteCookie(simpleCookie)
+        XCTAssertEqual(storage.cookies!.count, 1)
         storage.deleteCookie(simpleCookie2)
         XCTAssertEqual(storage.cookies!.count, 0)
     }
@@ -225,7 +233,7 @@ class TestHTTPCookieStorage: XCTestCase {
             .domain: "swift.org",
         ])!
         storage.setCookies([simpleCookie], for: url, mainDocumentURL: mainUrl)
-        XCTAssertEqual(storage.cookies(for: url!)!.count, 2)
+        XCTAssertEqual(storage.cookies(for: url!)!.count, 1)
 
         let url1 = URL(string: "https://dt.swift.org/downloads")
         let simpleCookie1 = HTTPCookie(properties: [
@@ -249,9 +257,9 @@ class TestHTTPCookieStorage: XCTestCase {
         ])!
         let storage = HTTPCookieStorage.shared
         storage.setCookie(testCookie)
-        XCTAssertEqual(storage.cookies!.count, 3)
+        XCTAssertEqual(storage.cookies!.count, 1)
         var destPath: String
-        let bundlePath = Bundle.main.bundlePath
+        let bundlePath = testBundle().bundlePath
         var bundleName = "/" + bundlePath.components(separatedBy: "/").last!
         if let range = bundleName.range(of: ".", options: String.CompareOptions.backwards, range: nil, locale: nil) {
             bundleName = String(bundleName[..<range.lowerBound])

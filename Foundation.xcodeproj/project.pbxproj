@@ -340,6 +340,7 @@
 		BD8042161E09857800487EB8 /* TestLengthFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD8042151E09857800487EB8 /* TestLengthFormatter.swift */; };
 		BDBB65901E256BFA001A7286 /* TestEnergyFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDBB658F1E256BFA001A7286 /* TestEnergyFormatter.swift */; };
 		BDFDF0A71DFF5B3E00C04CC5 /* TestPersonNameComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDFDF0A61DFF5B3E00C04CC5 /* TestPersonNameComponents.swift */; };
+		BF85E9D81FBDCC2000A79793 /* TestHost.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF85E9D71FBDCC2000A79793 /* TestHost.swift */; };
 		BF8E65311DC3B3CB005AB5C3 /* TestNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF8E65301DC3B3CB005AB5C3 /* TestNotification.swift */; };
 		CC5249C01D341D23007CB54D /* TestUnitConverter.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC5249BF1D341D23007CB54D /* TestUnitConverter.swift */; };
 		CD1C7F7D1E303B47008E331C /* TestNSError.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD1C7F7C1E303B47008E331C /* TestNSError.swift */; };
@@ -804,15 +805,16 @@
 		B933A79D1F3055F600FE6846 /* NSString-UTF32-LE-data.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = "NSString-UTF32-LE-data.txt"; sourceTree = "<group>"; };
 		B951B5EB1F4E2A2000D8B332 /* TestNSLock.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestNSLock.swift; sourceTree = "<group>"; };
 		B9974B8F1EDF4A22007F15B8 /* TransferState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = TransferState.swift; path = http/TransferState.swift; sourceTree = "<group>"; };
-		B9974B901EDF4A22007F15B8 /* MultiHandle.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = MultiHandle.swift; path = http/MultiHandle.swift; sourceTree = "<group>"; };
-		B9974B911EDF4A22007F15B8 /* libcurlHelpers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = libcurlHelpers.swift; path = http/libcurlHelpers.swift; sourceTree = "<group>"; };
+		B9974B901EDF4A22007F15B8 /* MultiHandle.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MultiHandle.swift; sourceTree = "<group>"; };
+		B9974B911EDF4A22007F15B8 /* libcurlHelpers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = libcurlHelpers.swift; sourceTree = "<group>"; };
 		B9974B921EDF4A22007F15B8 /* HTTPURLProtocol.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = HTTPURLProtocol.swift; path = http/HTTPURLProtocol.swift; sourceTree = "<group>"; };
 		B9974B931EDF4A22007F15B8 /* HTTPMessage.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = HTTPMessage.swift; path = http/HTTPMessage.swift; sourceTree = "<group>"; };
 		B9974B941EDF4A22007F15B8 /* HTTPBodySource.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = HTTPBodySource.swift; path = http/HTTPBodySource.swift; sourceTree = "<group>"; };
-		B9974B951EDF4A22007F15B8 /* EasyHandle.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = EasyHandle.swift; path = http/EasyHandle.swift; sourceTree = "<group>"; };
+		B9974B951EDF4A22007F15B8 /* EasyHandle.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EasyHandle.swift; sourceTree = "<group>"; };
 		BD8042151E09857800487EB8 /* TestLengthFormatter.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TestLengthFormatter.swift; sourceTree = "<group>"; };
 		BDBB658F1E256BFA001A7286 /* TestEnergyFormatter.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TestEnergyFormatter.swift; sourceTree = "<group>"; };
 		BDFDF0A61DFF5B3E00C04CC5 /* TestPersonNameComponents.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TestPersonNameComponents.swift; sourceTree = "<group>"; };
+		BF85E9D71FBDCC2000A79793 /* TestHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestHost.swift; sourceTree = "<group>"; };
 		BF8E65301DC3B3CB005AB5C3 /* TestNotification.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TestNotification.swift; sourceTree = "<group>"; };
 		C2A9D75B1C15C08B00993803 /* TestNSUUID.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TestNSUUID.swift; sourceTree = "<group>"; };
 		C93559281C12C49F009FD6A9 /* TestAffineTransform.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TestAffineTransform.swift; sourceTree = "<group>"; };
@@ -999,6 +1001,7 @@
 		5B1FD9C71D6D162D0080E83C /* Session */ = {
 			isa = PBXGroup;
 			children = (
+				614732781FC2DEB7005B5E61 /* libcurl */,
 				E4F889331E9CF04D008A70EB /* http */,
 				5B1FD9C81D6D16580080E83C /* Configuration.swift */,
 				5B1FD9CE1D6D16580080E83C /* URLSession.swift */,
@@ -1361,6 +1364,16 @@
 			path = Foundation;
 			sourceTree = "<group>";
 		};
+		614732781FC2DEB7005B5E61 /* libcurl */ = {
+			isa = PBXGroup;
+			children = (
+				B9974B901EDF4A22007F15B8 /* MultiHandle.swift */,
+				B9974B911EDF4A22007F15B8 /* libcurlHelpers.swift */,
+				B9974B951EDF4A22007F15B8 /* EasyHandle.swift */,
+			);
+			path = libcurl;
+			sourceTree = "<group>";
+		};
 		9F4ADBCF1ECD4F56001F0B3D /* xdgTestHelper */ = {
 			isa = PBXGroup;
 			children = (
@@ -1376,11 +1389,8 @@
 			children = (
 				B9974B921EDF4A22007F15B8 /* HTTPURLProtocol.swift */,
 				B9974B8F1EDF4A22007F15B8 /* TransferState.swift */,
-				B9974B901EDF4A22007F15B8 /* MultiHandle.swift */,
-				B9974B911EDF4A22007F15B8 /* libcurlHelpers.swift */,
 				B9974B931EDF4A22007F15B8 /* HTTPMessage.swift */,
 				B9974B941EDF4A22007F15B8 /* HTTPBodySource.swift */,
-				B9974B951EDF4A22007F15B8 /* EasyHandle.swift */,
 			);
 			name = http;
 			sourceTree = "<group>";
@@ -1507,6 +1517,7 @@
 				EA54A6FA1DB16D53009E0809 /* TestObjCRuntime.swift */,
 				5B6F17941C48631C00935030 /* TestProcess.swift */,
 				400E22641C1A4E58007C5933 /* TestProcessInfo.swift */,
+				BF85E9D71FBDCC2000A79793 /* TestHost.swift */,
 				EA01AAEB1DA839C4008F4E07 /* TestProgress.swift */,
 				5E5835F31C20C9B500C81317 /* TestThread.swift */,
 				B951B5EB1F4E2A2000D8B332 /* TestNSLock.swift */,
@@ -2037,7 +2048,7 @@
 			isa = PBXProject;
 			attributes = {
 				LastSwiftUpdateCheck = 0830;
-				LastUpgradeCheck = 0830;
+				LastUpgradeCheck = 0910;
 				ORGANIZATIONNAME = Apple;
 				TargetAttributes = {
 					5B5D885C1BBC938800234F36 = {
@@ -2435,6 +2446,7 @@
 				2EBE67A51C77BF0E006583D5 /* TestDateFormatter.swift in Sources */,
 				5B13B3291C582D4C00651CE2 /* TestCalendar.swift in Sources */,
 				5B13B34F1C582D4C00651CE2 /* TestXMLParser.swift in Sources */,
+				BF85E9D81FBDCC2000A79793 /* TestHost.swift in Sources */,
 				D5C40F331CDA1D460005690C /* TestOperationQueue.swift in Sources */,
 				BDBB65901E256BFA001A7286 /* TestEnergyFormatter.swift in Sources */,
 				5B13B32F1C582D4C00651CE2 /* TestNSGeometry.swift in Sources */,
@@ -2513,14 +2525,20 @@
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_LINK_OBJC_RUNTIME = NO;
 				CLANG_MODULES_AUTOLINK = NO;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
@@ -2562,14 +2580,20 @@
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_LINK_OBJC_RUNTIME = NO;
 				CLANG_MODULES_AUTOLINK = NO;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
 				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
@@ -2775,7 +2799,6 @@
 					"-DCF_CHARACTERSET_UNICODE_DATA_B=\\\\\"CoreFoundation/CharacterSets/CFUnicodeData-B.mapping\\\\\"",
 					"-DCF_CHARACTERSET_UNICHAR_DB=\\\\\"CoreFoundation/CharacterSets/CFUniCharPropertyDatabase.data\\\\\"",
 					"-DCF_CHARACTERSET_BITMAP=\\\\\"CoreFoundation/CharacterSets/CFCharacterSetBitmaps.bitmap\\\\\"",
-					"-Wno-nullability-completeness-on-arrays",
 					"-Wno-format-security",
 				);
 				PRIVATE_HEADERS_FOLDER_PATH = /usr/local/include/CoreFoundation;
@@ -2817,7 +2840,6 @@
 					"-DCF_CHARACTERSET_UNICODE_DATA_B=\\\\\"CoreFoundation/CharacterSets/CFUnicodeData-B.mapping\\\\\"",
 					"-DCF_CHARACTERSET_UNICHAR_DB=\\\\\"CoreFoundation/CharacterSets/CFUniCharPropertyDatabase.data\\\\\"",
 					"-DCF_CHARACTERSET_BITMAP=\\\\\"CoreFoundation/CharacterSets/CFCharacterSetBitmaps.bitmap\\\\\"",
-					"-Wno-nullability-completeness-on-arrays",
 					"-Wno-format-security",
 				);
 				PRIVATE_HEADERS_FOLDER_PATH = /usr/local/include/CoreFoundation;
@@ -3004,3 +3026,4 @@
 	};
 	rootObject = 5B5D88541BBC938800234F36 /* Project object */;
 }
+

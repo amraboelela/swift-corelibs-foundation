@@ -403,7 +403,8 @@ private struct JSONWriter {
                     writer("\\\"") // U+0022 quotation mark
                 case "\\":
                     writer("\\\\") // U+005C reverse solidus
-                // U+002F solidus not escaped
+                case "/":
+                    writer("\\/") // U+002F solidus
                 case "\u{8}":
                     writer("\\b") // U+0008 backspace
                 case "\u{c}":
@@ -819,9 +820,9 @@ private struct JSONReader {
                 
                 let startPointer = buffer.baseAddress!
                 let intEndPointer = UnsafeMutablePointer<UnsafeMutablePointer<Int8>?>.allocate(capacity: 1)
-                defer { intEndPointer.deallocate(capacity: 1) }
+                defer { intEndPointer.deallocate() }
                 let doubleEndPointer = UnsafeMutablePointer<UnsafeMutablePointer<Int8>?>.allocate(capacity: 1)
-                defer { doubleEndPointer.deallocate(capacity: 1) }
+                defer { doubleEndPointer.deallocate() }
                 let intResult = strtol(startPointer, intEndPointer, 10)
                 let intDistance = startPointer.distance(to: intEndPointer[0]!)
                 let doubleResult = strtod(startPointer, doubleEndPointer)
