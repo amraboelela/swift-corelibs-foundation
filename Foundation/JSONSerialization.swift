@@ -170,18 +170,22 @@ open class JSONSerialization : NSObject {
        The data must be in one of the 5 supported encodings listed in the JSON specification: UTF-8, UTF-16LE, UTF-16BE, UTF-32LE, UTF-32BE. The data may or may not have a BOM. The most efficient encoding to use for parsing is UTF-8, so if you have a choice in encoding the data passed to this method, use UTF-8.
      */
     open class func jsonObject(with data: Data, options opt: ReadingOptions = []) throws -> Any {
+        NSLog("jsonObject")
         return try data.withUnsafeBytes { (bytes: UnsafePointer<UInt8>) -> Any in
+            NSLog("data.withUnsafeBytes")
             let encoding: String.Encoding
             let buffer: UnsafeBufferPointer<UInt8>
             if let detected = parseBOM(bytes, length: data.count) {
+                NSLog("detected")
                 encoding = detected.encoding
                 buffer = UnsafeBufferPointer(start: bytes.advanced(by: detected.skipLength), count: data.count - detected.skipLength)
             }
             else {
+                NSLog("else detected")
                 encoding = detectEncoding(bytes, data.count)
                 buffer = UnsafeBufferPointer(start: bytes, count: data.count)
             }
-            
+            NSLog("let source")
             let source = JSONReader.UnicodeSource(buffer: buffer, encoding: encoding)
             let reader = JSONReader(source: source)
             if let (object, _) = try reader.parseObject(0, options: opt) {
@@ -193,6 +197,7 @@ open class JSONSerialization : NSObject {
             else if opt.contains(.allowFragments), let (value, _) = try reader.parseValue(0, options: opt) {
                 return value
             }
+            NSLog("after else if")
             throw NSError(domain: NSCocoaErrorDomain, code: CocoaError.propertyListReadCorrupt.rawValue, userInfo: [
                 "NSDebugDescription" : "JSON text did not start with array or object and option to allow fragments not set."
             ])
