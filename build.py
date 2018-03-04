@@ -223,6 +223,8 @@ private = [
 	'CoreFoundation/String.subproj/CFRunArray.h',
 	'CoreFoundation/Locale.subproj/CFDateFormatter_Private.h',
 	'CoreFoundation/Locale.subproj/CFLocale_Private.h',
+	'CoreFoundation/Parsing.subproj/CFPropertyList_Private.h',
+	'CoreFoundation/Base.subproj/CFKnownLocations.h',
 ],
 project = [
 ])
@@ -276,6 +278,10 @@ sources = CompileSources([
 	'CoreFoundation/PlugIn.subproj/CFBundle_Locale.c',
 	'CoreFoundation/PlugIn.subproj/CFBundle_Resources.c',
 	'CoreFoundation/PlugIn.subproj/CFBundle_Strings.c',
+	'CoreFoundation/PlugIn.subproj/CFBundle_Main.c',
+	'CoreFoundation/PlugIn.subproj/CFBundle_ResourceFork.c',
+	'CoreFoundation/PlugIn.subproj/CFBundle_Executable.c',
+	'CoreFoundation/PlugIn.subproj/CFBundle_DebugStrings.c',
 	'CoreFoundation/PlugIn.subproj/CFPlugIn.c',
 	'CoreFoundation/PlugIn.subproj/CFPlugIn_Factory.c',
 	'CoreFoundation/PlugIn.subproj/CFPlugIn_Instance.c',
@@ -316,6 +322,7 @@ sources = CompileSources([
 	'CoreFoundation/String.subproj/CFAttributedString.c',
 	'CoreFoundation/String.subproj/CFRunArray.c',
 	'CoreFoundation/URL.subproj/CFURLSessionInterface.c',
+	'CoreFoundation/Base.subproj/CFKnownLocations.c',
 ])
 
 # This code is already in libdispatch so is only needed if libdispatch is
@@ -425,7 +432,8 @@ swift_sources = CompileSwiftSources([
 	'Foundation/URLResponse.swift',
 	'Foundation/URLSession/Configuration.swift',
 	'Foundation/URLSession/libcurl/EasyHandle.swift',
-	'Foundation/URLSession/http/HTTPBodySource.swift',
+	'Foundation/URLSession/BodySource.swift',
+	'Foundation/URLSession/Message.swift',
 	'Foundation/URLSession/http/HTTPMessage.swift',
 	'Foundation/URLSession/libcurl/MultiHandle.swift',
 	'Foundation/URLSession/URLSession.swift',
@@ -433,7 +441,8 @@ swift_sources = CompileSwiftSources([
 	'Foundation/URLSession/URLSessionDelegate.swift',
 	'Foundation/URLSession/URLSessionTask.swift',
 	'Foundation/URLSession/TaskRegistry.swift',
-	'Foundation/URLSession/http/TransferState.swift',
+	'Foundation/URLSession/NativeProtocol.swift',
+	'Foundation/URLSession/TransferState.swift',
 	'Foundation/URLSession/libcurl/libcurlHelpers.swift',
     'Foundation/URLSession/http/HTTPURLProtocol.swift',
 	'Foundation/UserDefaults.swift',

@@ -16,8 +16,6 @@
     import SwiftXCTest
 #endif
 
-class OptionalParserConformance: XMLParserDelegate {}
-
 enum XMLParserDelegateEvent {
     case startDocument
     case endDocument
@@ -49,7 +47,7 @@ extension XMLParserDelegateEvent: Equatable {
 
 }
 
-class XMLParserDelegateEventStream: XMLParserDelegate {
+class XMLParserDelegateEventStream: NSObject, XMLParserDelegate {
     var events: [XMLParserDelegateEvent] = []
 
     func parserDidStartDocument(_ parser: XMLParser) {
@@ -86,7 +84,8 @@ class TestXMLParser : XCTestCase {
             return xmlUnderTest
         }
         if let open = encoding.range(of: "(") {
-            encoding = String(encoding[open.upperBound...])
+            let range: Range<String.Index> = open.upperBound..<encoding.endIndex
+            encoding = String(encoding[range])
         }
         if let close = encoding.range(of: ")") {
             encoding = String(encoding[..<close.lowerBound])

@@ -27,6 +27,7 @@ class TestNSArray : XCTestCase {
             ("test_constructors", test_constructors),
             ("test_constructorWithCopyItems", test_constructorWithCopyItems),
             ("test_enumeration", test_enumeration),
+            ("test_enumerationUsingBlock", test_enumerationUsingBlock),
             ("test_sequenceType", test_sequenceType),
             ("test_objectAtIndex", test_objectAtIndex),
             ("test_binarySearch", test_binarySearch),
@@ -46,10 +47,13 @@ class TestNSArray : XCTestCase {
             ("test_mutableCopying", test_mutableCopying),
             ("test_writeToFile", test_writeToFile),
             ("test_initWithContentsOfFile", test_initWithContentsOfFile),
+            ("test_initMutableWithContentsOfFile", test_initMutableWithContentsOfFile),
+            ("test_initMutableWithContentsOfURL", test_initMutableWithContentsOfURL),
             ("test_readWriteURL", test_readWriteURL),
             ("test_insertObjectAtIndex", test_insertObjectAtIndex),
             ("test_insertObjectsAtIndexes", test_insertObjectsAtIndexes),
             ("test_replaceObjectsAtIndexesWithObjects", test_replaceObjectsAtIndexesWithObjects),
+            ("test_pathsMatchingExtensions", test_pathsMatchingExtensions),
         ]
     }
     
@@ -93,12 +97,9 @@ class TestNSArray : XCTestCase {
 
         XCTAssertEqual(array1[0] as! String, "foo")
         XCTAssertEqual(array2[0] as! String, "foo")
-
-        // Disable this test for now as it fails, althought it works against Darwin Foundation.
-        // The test may not acutally be correct anyway.
-        //foo.append("1")
-        //XCTAssertEqual(array1[0] as! String, "foo1")
-        //XCTAssertEqual(array2[0] as! String, "foo")
+        foo.append("1")
+        XCTAssertEqual(array1[0] as! String, "foo1")
+        XCTAssertEqual(array2[0] as! String, "foo")
     }
     
     func test_enumeration() {
@@ -126,6 +127,127 @@ class TestNSArray : XCTestCase {
         XCTAssertNil(reverseEmpty.nextObject())
     }
     
+    func test_enumerationUsingBlock() {
+        let array : NSArray = NSArray(array: Array(0..<100))
+        let createIndexesArrayHavingSeen = { (havingSeen: IndexSet) in
+            return (0 ..< array.count).map { havingSeen.contains($0) }
+        }
+        
+        let noIndexes = IndexSet()
+        let allIndexes = IndexSet(integersIn: 0 ..< array.count)
+        let firstHalfOfIndexes = IndexSet(integersIn: 0 ..< array.count / 2)
+        let lastHalfOfIndexes = IndexSet(integersIn: array.count / 2 ..< array.count)
+        let evenIndexes : IndexSet = {
+            var indexes = IndexSet()
+            for index in allIndexes.filter({ $0 % 2 == 0 }) {
+                indexes.insert(index)
+            }
+            return indexes
+        }()
+        
+        let testExpectingToSee = { (expectation: IndexSet, block: (inout UnsafeMutableBufferPointer<Bool>) -> Void) in
+            var indexesSeen = createIndexesArrayHavingSeen(noIndexes)
+            indexesSeen.withUnsafeMutableBufferPointer(block)
+            XCTAssertEqual(indexesSeen, createIndexesArrayHavingSeen(expectation))
+        }
+        
+        // Test enumerateObjects(_:), allowing it to run to completion...
+        
+        testExpectingToSee(allIndexes) { (indexesSeen) in
+            array.enumerateObjects { (value, index, stop) in
+                XCTAssertEqual(value as! NSNumber, array[index] as! NSNumber)
+                indexesSeen[index] = true
+            }
+        }
+        
+        // ... and stopping after the first half:
+        
+        testExpectingToSee(firstHalfOfIndexes) { (indexesSeen) in
+            array.enumerateObjects { (value, index, stop) in
+                XCTAssertEqual(value as! NSNumber, array[index] as! NSNumber)
+                
+                if firstHalfOfIndexes.contains(index) {
+                    indexesSeen[index] = true
+                } else {
+                    stop.pointee = true
+                }
+            }
+        }
+        
+        // -----
+        // Test enumerateObjects(options:using) and enumerateObjects(at:options:using:):
+        
+        // Test each of these options combinations:
+        let optionsToTest : [NSEnumerationOptions] = [
+            [],
+            [.concurrent],
+            [.reverse],
+            [.concurrent, .reverse],
+        ]
+        
+        for options in optionsToTest {
+            // Run to completion,
+            testExpectingToSee(allIndexes) { (indexesSeen) in
+                array.enumerateObjects(options: options, using: { (value, index, stop) in
+                    XCTAssertEqual(value as! NSNumber, array[index] as! NSNumber)
+                    indexesSeen[index] = true
+                })
+            }
+            
+            // run it only for half the indexes (use the right half depending on where we start),
+            let indexesForHalfEnumeration = options.contains(.reverse) ? lastHalfOfIndexes : firstHalfOfIndexes
+            
+            testExpectingToSee(indexesForHalfEnumeration) { (indexesSeen) in
+                array.enumerateObjects(options: options, using: { (value, index, stop) in
+                    XCTAssertEqual(value as! NSNumber, array[index] as! NSNumber)
+                    
+                    if indexesForHalfEnumeration.contains(index) {
+                        indexesSeen[index] = true
+                    } else {
+                        stop.pointee = true
+                    }
+                })
+            }
+            
+            // run only for a specific index set to test the at:… variant,
+            testExpectingToSee(evenIndexes) { (indexesSeen) in
+                array.enumerateObjects(at: evenIndexes, options: options, using: { (value, index, stop) in
+                    XCTAssertEqual(value as! NSNumber, array[index] as! NSNumber)
+                    indexesSeen[index] = true
+                })
+            }
+            
+            // and run for some indexes only to test stopping.
+            var indexesForStaggeredEnumeration = indexesForHalfEnumeration
+            indexesForStaggeredEnumeration.formIntersection(evenIndexes)
+            
+            let finalCount = indexesForStaggeredEnumeration.count
+            
+            let lockForSeenCount = NSLock()
+            var seenCount = 0
+            
+            testExpectingToSee(indexesForStaggeredEnumeration) { (indexesSeen) in
+                array.enumerateObjects(at: evenIndexes, options: options, using: { (value, index, stop) in
+                    XCTAssertEqual(value as! NSNumber, array[index] as! NSNumber)
+                    
+                    if (indexesForStaggeredEnumeration.contains(index)) {
+                        indexesSeen[index] = true
+                        
+                        lockForSeenCount.lock()
+                        seenCount += 1
+                        let currentCount = seenCount
+                        lockForSeenCount.unlock()
+                        
+                        if currentCount == finalCount {
+                            stop.pointee = true
+                        }
+                    }
+                })
+            }
+        }
+        
+    }
+    
     func test_sequenceType() {
         let array : NSArray = ["foo", "bar", "baz"]
         var res = [String]()
@@ -138,7 +260,7 @@ class TestNSArray : XCTestCase {
 //    func test_getObjects() {
 //        let array : NSArray = ["foo", "bar", "baz", "foo1", "bar2", "baz3",].bridge()
 //        var objects = [AnyObject]()
-//        array.getObjects(&objects, range: NSMakeRange(1, 3))
+//        array.getObjects(&objects, range: NSRange(location: 1, length: 3))
 //        XCTAssertEqual(objects.count, 3)
 //        let fetched = [
 //            (objects[0] as! NSString).bridge(),
@@ -336,7 +458,7 @@ class TestNSArray : XCTestCase {
             "bar2",
             "baz2"]
         
-        array1.replaceObjects(in: NSMakeRange(0, 2), withObjectsFrom: array2)
+        array1.replaceObjects(in: NSRange(location: 0, length: 2), withObjectsFrom: array2)
         
         XCTAssertEqual(array1[0] as? String, "foo2", "Expected foo2 but was \(array1[0])")
         XCTAssertEqual(array1[1] as? String, "bar2", "Expected bar2 but was \(array1[1])")
@@ -355,7 +477,7 @@ class TestNSArray : XCTestCase {
             "bar2",
             "baz2"]
         
-        array1.replaceObjects(in: NSMakeRange(1, 1), withObjectsFrom: array2, range: NSMakeRange(1, 2))
+        array1.replaceObjects(in: NSRange(location: 1, length: 1), withObjectsFrom: array2, range: NSRange(location: 1, length: 2))
         
         XCTAssertEqual(array1[0] as? String, "foo1", "Expected foo1 but was \(array1[0])")
         XCTAssertEqual(array1[1] as? String, "bar2", "Expected bar2 but was \(array1[1])")
@@ -527,7 +649,46 @@ class TestNSArray : XCTestCase {
             XCTFail("Temporary file creation failed")
         }
     }
-    
+
+    func test_initMutableWithContentsOfFile() {
+        if let testFilePath = createTestFile("TestFileOut.txt", _contents: Data(capacity: 234)) {
+            let a1: NSArray = ["foo", "bar"]
+            let isWritten = a1.write(toFile: testFilePath, atomically: true)
+            if isWritten {
+                let array = NSMutableArray.init(contentsOfFile: testFilePath)
+                XCTAssert(array == a1)
+                XCTAssertEqual(array?.count, 2)
+                array?.removeAllObjects()
+                XCTAssertEqual(array?.count, 0)
+            } else {
+                XCTFail("Write to file failed")
+            }
+            removeTestFile(testFilePath)
+        } else {
+            XCTFail("Temporary file creation failed")
+        }
+    }
+
+    func test_initMutableWithContentsOfURL() {
+        if let testFilePath = createTestFile("TestFileOut.txt", _contents: Data(capacity: 234)) {
+            let a1: NSArray = ["foo", "bar"]
+            let isWritten = a1.write(toFile: testFilePath, atomically: true)
+            if isWritten {
+                let url = URL(fileURLWithPath: testFilePath, isDirectory: false)
+                let array = NSMutableArray.init(contentsOf: url)
+                XCTAssert(array == a1)
+                XCTAssertEqual(array?.count, 2)
+                array?.removeAllObjects()
+                XCTAssertEqual(array?.count, 0)
+            } else {
+                XCTFail("Write to file failed")
+            }
+            removeTestFile(testFilePath)
+        } else {
+            XCTFail("Temporary file creation failed")
+        }
+    }
+
     func test_writeToFile() {
         let testFilePath = createTestFile("TestFileOut.txt", _contents: Data(capacity: 234))
         if let _ = testFilePath {
@@ -559,8 +720,21 @@ class TestNSArray : XCTestCase {
             try FileManager.default.createDirectory(atPath: tempDir, withIntermediateDirectories: false, attributes: nil)
             let testFile = tempDir + "/readWriteURL.txt"
             let url = URL(fileURLWithPath: testFile)
+            let data2: NSArray
+#if DARWIN_COMPATIBILITY_TESTS
+            if #available(OSX 10.13, *) {
+                try data.write(to: url)
+                data2 = try NSArray(contentsOf: url, error: ())
+            } else {
+                guard data.write(toFile: testFile, atomically: true) else {
+                    throw NSError(domain: NSCocoaErrorDomain, code: CocoaError.fileWriteUnknown.rawValue)
+                }
+                data2 = NSArray(contentsOfFile: testFile)!
+            }
+#else
             try data.write(to: url)
-            let data2 = try NSArray(contentsOf: url, error: ())
+            data2 = try NSArray(contentsOf: url, error: ())
+#endif
             XCTAssertEqual(data, data2)
             removeTestFile(testFile)
         } catch let e {
@@ -612,6 +786,24 @@ class TestNSArray : XCTestCase {
         let a3 = NSMutableArray(arrayLiteral: "one", "two", "three", "four")
         a3.replaceObjects(at: [3, 2, 1, 0], with: ["a", "b", "c", "d"])
         XCTAssertEqual(a3, ["a", "b", "c", "d"])
+    }
+
+    func test_pathsMatchingExtensions() {
+        let paths = NSArray(arrayLiteral: "file1.txt", "/tmp/file2.txt", "file3.jpg", "file3.png", "/file4.png", "txt", ".txt")
+        let match1 = paths.pathsMatchingExtensions(["txt"])
+        XCTAssertEqual(match1, ["file1.txt", "/tmp/file2.txt"])
+
+        let match2 = paths.pathsMatchingExtensions([])
+        XCTAssertEqual(match2, [])
+
+        let match3 = paths.pathsMatchingExtensions([".txt", "png"])
+        XCTAssertEqual(match3, ["file3.png", "/file4.png"])
+
+        let match4 = paths.pathsMatchingExtensions(["", ".tx", "tx"])
+        XCTAssertEqual(match4, [])
+
+        let match5 = paths.pathsMatchingExtensions(["..txt"])
+        XCTAssertEqual(match5, [])
     }
 
     private func createTestFile(_ path: String, _contents: Data) -> String? {

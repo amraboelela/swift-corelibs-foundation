@@ -206,7 +206,6 @@ class TestNSData: XCTestCase {
             ("test_dataHash", test_dataHash),
             ("test_genericBuffers", test_genericBuffers),
             ("test_writeFailure", test_writeFailure),
-            ("testBasicConstruction", testBasicConstruction),
             ("testBridgingDefault", testBridgingDefault),
             ("testBridgingMutable", testBridgingMutable),
             ("testCopyBytes_oversized", testCopyBytes_oversized),
@@ -248,8 +247,14 @@ class TestNSData: XCTestCase {
             ("test_initializeWithBase64EncodedStringGetsDecodedData", test_initializeWithBase64EncodedStringGetsDecodedData),
             ("test_base64DecodeWithPadding1", test_base64DecodeWithPadding1),
             ("test_base64DecodeWithPadding2", test_base64DecodeWithPadding2),
-            ("test_rangeOfData",test_rangeOfData),
-            ("test_initMutableDataWithLength", test_initMutableDataWithLength),
+            ("test_rangeOfData", test_rangeOfData),
+            ("test_initNSMutableData()", test_initNSMutableData),
+            ("test_initNSMutableDataWithLength", test_initNSMutableDataWithLength),
+            ("test_initNSMutableDataWithCapacity", test_initNSMutableDataWithCapacity),
+            ("test_initNSMutableDataFromData", test_initNSMutableDataFromData),
+            ("test_initNSMutableDataFromBytes", test_initNSMutableDataFromBytes),
+            ("test_initNSMutableDataContentsOf", test_initNSMutableDataContentsOf),
+            ("test_initNSMutableDataBase64", test_initNSMutableDataBase64),
             ("test_replaceBytes", test_replaceBytes),
             ("test_replaceBytesWithNil", test_replaceBytesWithNil),
             ("test_initDataWithCapacity", test_initDataWithCapacity),
@@ -761,12 +766,12 @@ class TestNSData: XCTestCase {
         let baseFullRange = NSRange(location : 0,length : baseData.count)
         let noPrefixRange = NSRange(location : 2,length : baseData.count-2)
         let noSuffixRange = NSRange(location : 0,length : baseData.count-2)
-        let notFoundRange = NSMakeRange(NSNotFound, 0)
+        let notFoundRange = NSRange(location: NSNotFound, length: 0)
         
         
         let prefixData : [UInt8] = [0x00,0x01]
         let prefix = Data(bytes: prefixData, count: prefixData.count)
-        let prefixRange = NSMakeRange(0, prefixData.count)
+        let prefixRange = NSRange(location: 0, length: prefixData.count)
         
         XCTAssert(NSEqualRanges(base.range(of: prefix, options: [], in: baseFullRange),prefixRange))
         XCTAssert(NSEqualRanges(base.range(of: prefix, options: [.anchored], in: baseFullRange),prefixRange))
@@ -781,7 +786,7 @@ class TestNSData: XCTestCase {
         
         let suffixData : [UInt8] = [0x03,0x04]
         let suffix = Data(bytes: suffixData, count: suffixData.count)
-        let suffixRange = NSMakeRange(3, suffixData.count)
+        let suffixRange = NSRange(location: 3, length: suffixData.count)
         
         XCTAssert(NSEqualRanges(base.range(of: suffix, options: [], in: baseFullRange),suffixRange))
         XCTAssert(NSEqualRanges(base.range(of: suffix, options: [.anchored], in: baseFullRange),notFoundRange))
@@ -796,7 +801,7 @@ class TestNSData: XCTestCase {
         
         let sliceData : [UInt8] = [0x02,0x03]
         let slice = Data(bytes: sliceData, count: sliceData.count)
-        let sliceRange = NSMakeRange(2, sliceData.count)
+        let sliceRange = NSRange(location: 2, length: sliceData.count)
         
         XCTAssert(NSEqualRanges(base.range(of: slice, options: [], in: baseFullRange),sliceRange))
         XCTAssert(NSEqualRanges(base.range(of: slice, options: [.anchored], in: baseFullRange),notFoundRange))
@@ -811,10 +816,114 @@ class TestNSData: XCTestCase {
         
     }
 
-    func test_initMutableDataWithLength() {
+    // Check all of the NSMutableData constructors are available.
+    func test_initNSMutableData() {
+        let mData = NSMutableData()
+        XCTAssertNotNil(mData)
+        XCTAssertEqual(mData.length, 0)
+    }
+
+    func test_initNSMutableDataWithLength() {
         let mData = NSMutableData(length: 30)
         XCTAssertNotNil(mData)
         XCTAssertEqual(mData!.length, 30)
+    }
+
+    func test_initNSMutableDataWithCapacity() {
+        let mData = NSMutableData(capacity: 30)
+        XCTAssertNotNil(mData)
+        XCTAssertEqual(mData!.length, 0)
+    }
+
+    func test_initNSMutableDataFromData() {
+        let data = Data(bytes: [1, 2, 3])
+        let mData = NSMutableData(data: data)
+        XCTAssertEqual(mData.length, 3)
+        XCTAssertEqual(NSData(data: data), mData)
+    }
+
+    func test_initNSMutableDataFromBytes() {
+        let data = Data([1, 2, 3, 4, 5, 6])
+        var testBytes: [UInt8] = [1, 2, 3, 4, 5, 6]
+
+        let md1 = NSMutableData(bytes: &testBytes, length: testBytes.count)
+        XCTAssertEqual(md1, NSData(data: data))
+
+        let md2 = NSMutableData(bytes: nil, length: 0)
+        XCTAssertEqual(md2.length, 0)
+
+        let testBuffer = malloc(testBytes.count)!
+        let md3 = NSMutableData(bytesNoCopy: testBuffer, length: testBytes.count)
+        md3.replaceBytes(in: NSRange(location: 0, length: testBytes.count), withBytes: &testBytes)
+        XCTAssertEqual(md3, NSData(data: data))
+
+        let md4 = NSMutableData(bytesNoCopy: &testBytes, length: testBytes.count, deallocator: nil)
+        XCTAssertEqual(md4.length, testBytes.count)
+
+        let md5 = NSMutableData(bytesNoCopy: &testBytes, length: testBytes.count, freeWhenDone: false)
+        XCTAssertEqual(md5, NSData(data: data))
+    }
+
+    func test_initNSMutableDataContentsOf() {
+        let testDir = testBundle().resourcePath
+        let filename = testDir!.appending("/NSStringTestData.txt")
+        let url = URL(fileURLWithPath: filename)
+
+        func testText(_ mData: NSMutableData?) {
+            guard let mData = mData else {
+                XCTFail("Contents of file are Nil")
+                return
+            }
+            if let txt = String(data: Data(referencing: mData), encoding: .ascii) {
+                XCTAssertEqual(txt, "swift-corelibs-foundation")
+            } else {
+                XCTFail("Cant convert to string")
+            }
+        }
+
+        let contents1 = NSMutableData(contentsOfFile: filename)
+        XCTAssertNotNil(contents1)
+        testText(contents1)
+
+        let contents2 = try? NSMutableData(contentsOfFile: filename, options: [])
+        XCTAssertNotNil(contents2)
+        testText(contents2)
+
+        let contents3 = NSMutableData(contentsOf: url)
+        XCTAssertNotNil(contents3)
+        testText(contents3)
+
+        let contents4 = try? NSMutableData(contentsOf: url, options: [])
+        XCTAssertNotNil(contents4)
+        testText(contents4)
+
+        // Test failure to read
+        let badFilename = "does not exist"
+        let badUrl = URL(fileURLWithPath: badFilename)
+
+        XCTAssertNil(NSMutableData(contentsOfFile: badFilename))
+        XCTAssertNil(try? NSMutableData(contentsOfFile: badFilename, options: []))
+        XCTAssertNil(NSMutableData(contentsOf: badUrl))
+        XCTAssertNil(try? NSMutableData(contentsOf: badUrl, options:  []))
+    }
+
+    func test_initNSMutableDataBase64() {
+        let srcData = Data([1, 2, 3, 4, 5, 6, 7, 8, 9, 0])
+        let base64Data = srcData.base64EncodedData()
+        let base64String = srcData.base64EncodedString()
+        XCTAssertEqual(base64String, "AQIDBAUGBwgJAA==")
+
+        let mData1 = NSMutableData(base64Encoded: base64Data)
+        XCTAssertNotNil(mData1)
+        XCTAssertEqual(mData1!, NSData(data: srcData))
+
+        let mData2 = NSMutableData(base64Encoded: base64String)
+        XCTAssertNotNil(mData2)
+        XCTAssertEqual(mData2!, NSData(data: srcData))
+
+        // Test bad input
+        XCTAssertNil(NSMutableData(base64Encoded: Data([1,2,3]), options: []))
+        XCTAssertNil(NSMutableData(base64Encoded: "x", options: []))
     }
 
     func test_replaceBytes() {
@@ -842,7 +951,7 @@ class TestNSData: XCTestCase {
         }
 
         let replacement = makeData([8, 9, 10])
-        mData.replaceBytes(in: NSMakeRange(1, 3), withBytes: replacement.bytes,
+        mData.replaceBytes(in: NSRange(location: 1, length: 3), withBytes: replacement.bytes,
             length: 3)
         let expected = makeData([0, 8, 9, 10, 0])
         XCTAssertEqual(mData, expected)
@@ -854,7 +963,7 @@ class TestNSData: XCTestCase {
         }
 
         let mData = makeData([1, 2, 3, 4, 5])
-        mData.replaceBytes(in: NSMakeRange(1, 3), withBytes: nil, length: 0)
+        mData.replaceBytes(in: NSRange(location: 1, length: 3), withBytes: nil, length: 0)
         let expected = makeData([1, 5])
         XCTAssertEqual(mData, expected)
     }
@@ -930,11 +1039,11 @@ extension TestNSData {
             // Mutate it
             bytes.pointee = 0x67
             XCTAssertEqual(bytes.pointee, 0x67, "First byte should be 0x67")
-            XCTAssertEqual(mutatingHello[0], 0x67, "First byte accessed via other method should still be 0x67")
-            
-            // Verify that the first data is still correct
-            XCTAssertEqual(hello[0], 0x68, "The first byte should still be 0x68")
         }
+        XCTAssertEqual(mutatingHello[0], 0x67, "First byte accessed via other method should still be 0x67")
+
+        // Verify that the first data is still correct
+        XCTAssertEqual(hello[0], 0x68, "The first byte should still be 0x68")
     }
     
 
@@ -3999,8 +4108,9 @@ extension TestNSData {
         }
         XCTAssertEqual(data[data.startIndex.advanced(by: 1)], 0xFF)
     }
-    
+
     func test_validateMutation_slice_mutableBacking_withUnsafeMutableBytes_lengthLessThanLowerBound() {
+#if !DARWIN_COMPATIBILITY_TESTS // Crashes on native Darwin
         var base = Data(referencing: NSData(bytes: "hello world", length: 11))
         base.append(contentsOf: [1, 2, 3, 4, 5, 6])
         var data = base[4..<6]
@@ -4008,8 +4118,9 @@ extension TestNSData {
             ptr.advanced(by: 1).pointee = 0xFF
         }
         XCTAssertEqual(data[data.startIndex.advanced(by: 1)], 0xFF)
+#endif
     }
-    
+
     func test_validateMutation_slice_customBacking_withUnsafeMutableBytes_lengthLessThanLowerBound() {
         var data = Data(referencing: AllOnesImmutableData(length: 10))[4..<6]
         data.withUnsafeMutableBytes { (ptr: UnsafeMutablePointer<UInt8>) in
@@ -4017,8 +4128,9 @@ extension TestNSData {
         }
         XCTAssertEqual(data[data.startIndex.advanced(by: 1)], 0xFF)
     }
-    
+
     func test_validateMutation_slice_customMutableBacking_withUnsafeMutableBytes_lengthLessThanLowerBound() {
+#if !DARWIN_COMPATIBILITY_TESTS // Crashes on native Darwin
         var base = Data(referencing: AllOnesData(length: 1))
         base.count = 10
         var data = base[4..<6]
@@ -4026,6 +4138,7 @@ extension TestNSData {
             ptr.advanced(by: 1).pointee = 0xFF
         }
         XCTAssertEqual(data[data.startIndex.advanced(by: 1)], 0xFF)
+#endif
     }
 }
 

@@ -423,9 +423,17 @@ extension Float : _ObjectTypeBridgeable {
     }
 
     public init?(exactly number: NSNumber) {
-        guard let value = Double(exactly: number) else { return nil }
-        guard let result = Float(exactly: value) else { return nil }
-        self = result
+        let type = number.objCType.pointee
+        if type == 0x49 || type == 0x4c || type == 0x51 {
+            guard let result = Float(exactly: number.uint64Value) else { return nil }
+            self = result
+        } else if type == 0x69 || type == 0x6c || type == 0x71 {
+            guard let result = Float(exactly: number.int64Value) else { return nil }
+            self = result
+        } else {
+            guard let result = Float(exactly: number.doubleValue) else { return nil }
+            self = result
+        }
     }
 
     public func _bridgeToObjectiveC() -> NSNumber {
@@ -437,25 +445,12 @@ extension Float : _ObjectTypeBridgeable {
     }
     
     public static func _conditionallyBridgeFromObjectiveC(_ x: NSNumber, result: inout Float?) -> Bool {
-        guard let value = Double(exactly: x) else { return false }
-        guard !value.isNaN else {
-            result = Float.nan
+        if x.floatValue.isNaN {
+            result = x.floatValue
             return true
         }
-        guard !value.isInfinite else {
-            if value.sign == .minus {
-                result = -Float.infinity
-            } else {
-                result = Float.infinity
-            }
-            return true
-        }
-        guard Swift.abs(value) <= Double(Float.greatestFiniteMagnitude) else {
-            return false
-        }
-
-        result = Float(value)
-        return true
+        result = Float(exactly: x)
+        return result != nil
     }
     
     public static func _unconditionallyBridgeFromObjectiveC(_ source: NSNumber?) -> Float {
@@ -485,7 +480,10 @@ extension Double : _ObjectTypeBridgeable {
             guard let result = Double(exactly: number.int64Value) else  { return nil }
             self = result
         } else {
-            self = number.doubleValue
+            // All other integer types and single-precision floating points will
+            // fit in a `Double` without truncation.
+            guard let result = Double(exactly: number.doubleValue) else { return nil }
+            self = result
         }
     }
 
@@ -498,9 +496,12 @@ extension Double : _ObjectTypeBridgeable {
     }
     
     public static func _conditionallyBridgeFromObjectiveC(_ x: NSNumber, result: inout Double?) -> Bool {
-        guard let value = Double(exactly: x) else { return false }
-        result = value
-        return true
+        if x.doubleValue.isNaN {
+            result = x.doubleValue
+            return true
+        }
+        result = Double(exactly: x)
+        return result != nil
     }
     
     public static func _unconditionallyBridgeFromObjectiveC(_ source: NSNumber?) -> Double {
@@ -617,6 +618,34 @@ open class NSNumber : NSValue {
             return _objCType("d")
         case kCFNumberSInt128Type:
             return _objCType("Q")
+        default:
+            fatalError("unsupported CFNumberType: '\(numberType)'")
+        }
+    }
+    
+    internal var _swiftValueOfOptimalType: Any {
+        if self === kCFBooleanTrue {
+            return true
+        } else if self === kCFBooleanFalse {
+            return false
+        }
+        
+        let numberType = _CFNumberGetType2(_cfObject)
+        switch numberType {
+        case kCFNumberSInt8Type:
+            return Int(int8Value)
+        case kCFNumberSInt16Type:
+            return Int(int16Value)
+        case kCFNumberSInt32Type:
+            return Int(int32Value)
+        case kCFNumberSInt64Type:
+            return int64Value < Int.max ? Int(int64Value) : int64Value
+        case kCFNumberFloat32Type:
+            return floatValue
+        case kCFNumberFloat64Type:
+            return doubleValue
+        case kCFNumberSInt128Type:
+            return int128Value
         default:
             fatalError("unsupported CFNumberType: '\(numberType)'")
         }

@@ -395,8 +395,8 @@ extension CFError : Error {
         return CFErrorGetCode(self)
     }
 
-    public var _userInfo: Any? {
-        return CFErrorCopyUserInfo(self) as Any
+    public var _userInfo: AnyObject? {
+        return CFErrorCopyUserInfo(self) as AnyObject
     }
 }
 
@@ -687,6 +687,16 @@ public extension CocoaError {
     /// The URL associated with this error, if any.
     var url: URL? {
         return _nsUserInfo[NSURLErrorKey._bridgeToObjectiveC()] as? URL
+    }
+}
+
+public extension CocoaError {
+    public static func error(_ code: CocoaError.Code, userInfo: [AnyHashable: Any]? = nil, url: URL? = nil) -> Error {
+        var info: [String: Any] = userInfo as? [String: Any] ?? [:]
+        if let url = url {
+            info[NSURLErrorKey] = url
+        }
+        return NSError(domain: NSCocoaErrorDomain, code: code.rawValue, userInfo: info)
     }
 }
 

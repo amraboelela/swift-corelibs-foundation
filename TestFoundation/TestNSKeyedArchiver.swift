@@ -221,12 +221,15 @@ class TestNSKeyedArchiver : XCTestCase {
     }
 
     func test_archive_mutable_dictionary() {
-        let mdictionary = NSMutableDictionary(dictionary: [
-            "one": NSNumber(value: Int(1)),
-            "two": NSNumber(value: Int(2)),
-            "three": NSNumber(value: Int(3)),
-        ])
-        
+        let one: NSNumber = NSNumber(value: Int(1))
+        let two: NSNumber = NSNumber(value: Int(2))
+        let three: NSNumber = NSNumber(value: Int(3))
+        let dict: [String : Any] = [
+            "one": one,
+            "two": two,
+            "three": three,
+        ]
+        let mdictionary = NSMutableDictionary(dictionary: dict)
         test_archive(mdictionary)
     }
     
@@ -236,7 +239,7 @@ class TestNSKeyedArchiver : XCTestCase {
     }
 
     func test_archive_nsrange() {
-        let range = NSValue(range: NSMakeRange(1234, 5678))
+        let range = NSValue(range: NSRange(location: 1234, length: 5678))
         test_archive(range)
     }
     
@@ -285,18 +288,21 @@ class TestNSKeyedArchiver : XCTestCase {
                 
                 let s1 = String(cString: charPtr)
                 let s2 = String(cString: expectedCharPtr!)
-                
+
+#if !DEPLOYMENT_RUNTIME_OBJC
                 // On Darwin decoded strings would belong to the autorelease pool, but as we don't have
                 // one in SwiftFoundation let's explicitly deallocate it here.
                 expectedCharPtr!.deallocate()
-                
+#endif
                 return s1 == s2
         })
     }
     
     func test_archive_user_class() {
+#if !DARWIN_COMPATIBILITY_TESTS  // Causes SIGABRT
         let userClass = UserClass(1234)
         test_archive(userClass)
+#endif
     }
     
     func test_archive_ns_user_class() {

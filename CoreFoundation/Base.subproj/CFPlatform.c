@@ -1,7 +1,7 @@
 /*	CFPlatform.c
-	Copyright (c) 1999-2016, Apple Inc. and the Swift project authors
+	Copyright (c) 1999-2017, Apple Inc. and the Swift project authors
  
-	Portions Copyright (c) 2014-2016 Apple Inc. and the Swift project authors
+	Portions Copyright (c) 2014-2017, Apple Inc. and the Swift project authors
 	Licensed under Apache License v2.0 with Runtime Library Exception
 	See http://swift.org/LICENSE.txt for license information
 	See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
@@ -123,6 +123,10 @@ const char *_CFProcessPath(void) {
 #endif
 
 #if DEPLOYMENT_TARGET_MACOSX || DEPLOYMENT_TARGET_EMBEDDED || DEPLOYMENT_TARGET_EMBEDDED_MINI
+Boolean _CFIsMainThread(void) {
+    return pthread_main_np() == 1;
+}
+
 const char *_CFProcessPath(void) {
     if (__CFProcessPath) return __CFProcessPath;
 #if DEPLOYMENT_TARGET_MACOSX
@@ -179,12 +183,6 @@ const char *_CFProcessPath(void) {
         __CFprogname = __CFProcessPath;
     }
     return __CFProcessPath;
-}
-
-#else
-
-Boolean _CFIsMainThread(void) {
-    return pthread_main_np() == 1;
 }
 #endif
 
@@ -286,8 +284,29 @@ CF_EXPORT CFStringRef CFCopyUserName(void) {
 #else
 #error Dont know how to compute user name on this platform
 #endif
-    if (!result)
+    if (!result) {
         result = (CFStringRef)CFRetain(CFSTR(""));
+    }
+    
+    return result;
+}
+
+CF_EXPORT CFStringRef CFCopyFullUserName(void) {
+    CFStringRef result = NULL;
+#if DEPLOYMENT_TARGET_MACOSX || DEPLOYMENT_TARGET_EMBEDDED || DEPLOYMENT_TARGET_EMBEDDED_MINI || DEPLOYMENT_TARGET_LINUX || DEPLOYMENT_TARGET_FREEBSD
+    uid_t euid;
+    __CFGetUGIDs(&euid, NULL);
+    struct passwd *upwd = getpwuid(euid ? euid : getuid());
+    if (upwd && upwd->pw_gecos) {
+        result = CFStringCreateWithCString(kCFAllocatorSystemDefault, upwd->pw_gecos, kCFPlatformInterfaceStringEncoding);
+    }
+#else
+#error Don't know how to compute full user name on this platform
+#endif
+    if (!result) {
+        result = (CFStringRef)CFRetain(CFSTR(""));
+    }
+    
     return result;
 }
 
@@ -612,7 +631,7 @@ static void *__CFTSDGetSpecific() {
 #endif
 }
 
-CF_PRIVATE Boolean __CFMainThreadHasExited;
+CF_PRIVATE _Atomic(bool) __CFMainThreadHasExited;
 static void __CFTSDFinalize(void *arg) {
     if (pthread_main_np()) {
         __CFMainThreadHasExited = true;
@@ -675,7 +694,7 @@ static __CFTSDTable *__CFTSDGetTable(const Boolean create) {
 
 // For the use of CF and Foundation only
 CF_EXPORT void *_CFGetTSDCreateIfNeeded(const uint32_t slot, const Boolean create) {
-    if (slot > CF_TSD_MAX_SLOTS) {
+    if (slot >= CF_TSD_MAX_SLOTS) {
         _CFLogSimple(kCFLogLevelError, "Error: TSD slot %d out of range (get)", slot);
         HALT;
     }
@@ -700,7 +719,7 @@ CF_EXPORT void *_CFGetTSD(uint32_t slot) {
 
 // For the use of CF and Foundation only
 CF_EXPORT void *_CFSetTSD(uint32_t slot, void *newVal, tsdDestructor destructor) {
-    if (slot > CF_TSD_MAX_SLOTS) {
+    if (slot >= CF_TSD_MAX_SLOTS) {
         _CFLogSimple(kCFLogLevelError, "Error: TSD slot %d out of range (set)", slot);
         HALT;
     }
@@ -1272,7 +1291,7 @@ CF_PRIVATE int asprintf(char **ret, const char *format, ...) {
     if (cnt < sz - 1) return cnt;
     sz = cnt + 8;
     char *oldret = *ret;
-    *ret = (char *) realloc(*ret, sz * sizeof(char));
+    *ret = __CFSafelyReallocate(*ret, sz * sizeof(char), NULL);
     if (!*ret && oldret) free(oldret);
     if (!*ret) return -1;
     va_start(args, format);
@@ -1321,7 +1340,7 @@ _CFThreadRef _CFThreadCreate(const _CFThreadAttributes attrs, void *_Nullable (*
     return thread;
 }
 
-CF_SWIFT_EXPORT int _CFThreadSetName(pthread_t thread, const char *_Nonnull name) {
+CF_CROSS_PLATFORM_EXPORT int _CFThreadSetName(pthread_t thread, const char *_Nonnull name) {
 #if DEPLOYMENT_TARGET_MACOSX || DEPLOYMENT_TARGET_EMBEDDED || DEPLOYMENT_TARGET_EMBEDDED_MINI
     if (pthread_equal(pthread_self(), thread)) {
         return pthread_setname_np(name);
@@ -1332,7 +1351,7 @@ CF_SWIFT_EXPORT int _CFThreadSetName(pthread_t thread, const char *_Nonnull name
 #endif
 }
 
-CF_SWIFT_EXPORT int _CFThreadGetName(char *_Nonnull buf, int length) {
+CF_CROSS_PLATFORM_EXPORT int _CFThreadGetName(char *_Nonnull buf, int length) {
 #if DEPLOYMENT_TARGET_MACOSX || DEPLOYMENT_TARGET_EMBEDDED || DEPLOYMENT_TARGET_EMBEDDED_MINI
     return pthread_getname_np(pthread_self(), buf, length);
 #elif DEPLOYMENT_TARGET_ANDROID

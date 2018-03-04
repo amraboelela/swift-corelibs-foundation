@@ -55,24 +55,30 @@ internal extension String {
 
     internal var _startOfPathExtension : String.Index? {
         precondition(!hasSuffix("/"))
-        
-        var curPos = endIndex
-        let lastCompStartPos = _startOfLastPathComponent
-        
+
+        var currentPosition = endIndex
+        let startOfLastPathComponent = _startOfLastPathComponent
+
         // Find the beginning of the extension
-        while curPos > lastCompStartPos {
-            let prevPos = index(before: curPos)
-            let char = self[prevPos]
-            if char == "/" {
+        while currentPosition > startOfLastPathComponent {
+            let previousPosition = index(before: currentPosition)
+            let character = self[previousPosition]
+            if character == "/" {
                 return nil
-            } else if char == "." {
-                if lastCompStartPos == prevPos {
+            } else if character == "." {
+                if startOfLastPathComponent == previousPosition {
+                    return nil
+                } else if case let previous2Position = index(before: previousPosition),
+                    previousPosition == index(before: endIndex) &&
+                    previous2Position == startOfLastPathComponent &&
+                    self[previous2Position] == "."
+                {
                     return nil
                 } else {
-                    return curPos
+                    return currentPosition
                 }
             }
-            curPos = prevPos
+            currentPosition = previousPosition
         }
         return nil
     }
@@ -97,25 +103,23 @@ internal extension String {
     internal func _stringByFixingSlashes(compress : Bool = true, stripTrailing: Bool = true) -> String {
         var result = self
         if compress {
-            result.withMutableCharacters { characterView in
-                let startPos = characterView.startIndex
-                var endPos = characterView.endIndex
-                var curPos = startPos
-                
-                while curPos < endPos {
-                    if characterView[curPos] == "/" {
-                        var afterLastSlashPos = curPos
-                        while afterLastSlashPos < endPos && characterView[afterLastSlashPos] == "/" {
-                            afterLastSlashPos = characterView.index(after: afterLastSlashPos)
-                        }
-                        if afterLastSlashPos != characterView.index(after: curPos) {
-                            characterView.replaceSubrange(curPos ..< afterLastSlashPos, with: ["/"])
-                            endPos = characterView.endIndex
-                        }
-                        curPos = afterLastSlashPos
-                    } else {
-                        curPos = characterView.index(after: curPos)
+            let startPos = result.startIndex
+            var endPos = result.endIndex
+            var curPos = startPos
+
+            while curPos < endPos {
+                if result[curPos] == "/" {
+                    var afterLastSlashPos = curPos
+                    while afterLastSlashPos < endPos && result[afterLastSlashPos] == "/" {
+                        afterLastSlashPos = result.index(after: afterLastSlashPos)
                     }
+                    if afterLastSlashPos != result.index(after: curPos) {
+                        result.replaceSubrange(curPos ..< afterLastSlashPos, with: ["/"])
+                        endPos = result.endIndex
+                    }
+                    curPos = afterLastSlashPos
+                } else {
+                    curPos = result.index(after: curPos)
                 }
             }
         }
@@ -208,25 +212,23 @@ public extension NSString {
         
         var result = _swiftObject
         if compress {
-            result.withMutableCharacters { characterView in
-                let startPos = characterView.startIndex
-                var endPos = characterView.endIndex
-                var curPos = startPos
-                
-                while curPos < endPos {
-                    if characterView[curPos] == "/" {
-                        var afterLastSlashPos = curPos
-                        while afterLastSlashPos < endPos && characterView[afterLastSlashPos] == "/" {
-                            afterLastSlashPos = characterView.index(after: afterLastSlashPos)
-                        }
-                        if afterLastSlashPos != characterView.index(after: curPos) {
-                            characterView.replaceSubrange(curPos ..< afterLastSlashPos, with: ["/"])
-                            endPos = characterView.endIndex
-                        }
-                        curPos = afterLastSlashPos
-                    } else {
-                        curPos = characterView.index(after: curPos)
+            let startPos = result.startIndex
+            var endPos = result.endIndex
+            var curPos = startPos
+
+            while curPos < endPos {
+                if result[curPos] == "/" {
+                    var afterLastSlashPos = curPos
+                    while afterLastSlashPos < endPos && result[afterLastSlashPos] == "/" {
+                        afterLastSlashPos = result.index(after: afterLastSlashPos)
                     }
+                    if afterLastSlashPos != result.index(after: curPos) {
+                        result.replaceSubrange(curPos ..< afterLastSlashPos, with: ["/"])
+                        endPos = result.endIndex
+                    }
+                    curPos = afterLastSlashPos
+                } else {
+                    curPos = result.index(after: curPos)
                 }
             }
         }
@@ -262,7 +264,7 @@ public extension NSString {
         if fixedSelf.length <= 1 {
             return fixedSelf
         }
-        if let extensionPos = (fixedSelf._startOfPathExtension) {
+        if let extensionPos = fixedSelf._startOfPathExtension {
             return String(fixedSelf.prefix(upTo: fixedSelf.index(before: extensionPos)))
         } else {
             return fixedSelf
@@ -475,8 +477,8 @@ public extension NSString {
                     break loop
                 }
                 
-                if char != nil {
-                    let lhs = caseSensitive ? char : String(char!).lowercased().first!
+                if let char = char {
+                    let lhs = caseSensitive ? char : String(char).lowercased().first!
                     let rhs = caseSensitive ? c : String(c).lowercased().first!
                     if lhs != rhs {
                         break loop
@@ -579,6 +581,11 @@ public func NSHomeDirectoryForUser(_ user: String?) -> String? {
 
 public func NSUserName() -> String {
     let userName = CFCopyUserName().takeRetainedValue()
+    return userName._swiftObject
+}
+
+public func NSFullUserName() -> String {
+    let userName = CFCopyFullUserName().takeRetainedValue()
     return userName._swiftObject
 }
 

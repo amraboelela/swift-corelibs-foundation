@@ -150,7 +150,7 @@ open class FileManager : NSObject {
             var isDir: ObjCBool = false
             if !fileExists(atPath: path, isDirectory: &isDir) {
                 let parent = path._nsObject.deletingLastPathComponent
-                if !fileExists(atPath: parent, isDirectory: &isDir) {
+                if !parent.isEmpty && !fileExists(atPath: parent, isDirectory: &isDir) {
                     try createDirectory(atPath: parent, withIntermediateDirectories: true, attributes: attributes)
                 }
                 if mkdir(path, S_IRWXU | S_IRWXG | S_IRWXO) != 0 {
@@ -296,15 +296,13 @@ open class FileManager : NSObject {
         result[.systemNumber] = NSNumber(value: UInt64(s.st_dev))
         result[.systemFileNumber] = NSNumber(value: UInt64(s.st_ino))
         
-        let pwd = getpwuid(s.st_uid)
-        if pwd != nil && pwd!.pointee.pw_name != nil {
-            let name = String(cString: pwd!.pointee.pw_name)
+        if let pwd = getpwuid(s.st_uid), pwd.pointee.pw_name != nil {
+            let name = String(cString: pwd.pointee.pw_name)
             result[.ownerAccountName] = name
         }
         
-        let grd = getgrgid(s.st_gid)
-        if grd != nil && grd!.pointee.gr_name != nil {
-            let name = String(cString: grd!.pointee.gr_name)
+        if let grd = getgrgid(s.st_gid), grd.pointee.gr_name != nil {
+            let name = String(cString: grd.pointee.gr_name)
             result[.groupOwnerAccountName] = name
         }
 
@@ -748,7 +746,7 @@ extension FileManager {
 
 extension FileManager {
     open var homeDirectoryForCurrentUser: URL {
-        return homeDirectory(forUser: CFCopyUserName().takeRetainedValue()._swiftObject)!
+        return homeDirectory(forUser: NSUserName())!
     }
     
     open var temporaryDirectory: URL {

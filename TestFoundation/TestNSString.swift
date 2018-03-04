@@ -100,6 +100,7 @@ class TestNSString : XCTestCase {
             ("test_replacingOccurrences", test_replacingOccurrences),
             ("test_getLineStart", test_getLineStart),
             ("test_substringWithRange", test_substringWithRange),
+            ("test_createCopy", test_createCopy),
         ]
     }
 
@@ -478,7 +479,7 @@ class TestNSString : XCTestCase {
         XCTAssertEqual(string.rangeOfCharacter(from: letters).location, 1)
         XCTAssertEqual(string.rangeOfCharacter(from: decimalDigits).location, 0)
         XCTAssertEqual(string.rangeOfCharacter(from: letters, options: .backwards).location, 2)
-        XCTAssertEqual(string.rangeOfCharacter(from: letters, options: [], range: NSMakeRange(2, 1)).location, 2)
+        XCTAssertEqual(string.rangeOfCharacter(from: letters, options: [], range: NSRange(location: 2, length: 1)).location, 2)
     }
     
     func test_CFStringCreateMutableCopy() {
@@ -603,7 +604,7 @@ class TestNSString : XCTestCase {
             var matches: [String] = []
             let count = path.completePath(into: &outName, caseSensitive: false, matchesInto: &matches, filterTypes: nil)
             XCTAssert(outName == "", "If no matches found then outName is nil.")
-            XCTAssert(matches.count == 0 && count == 0, "If no matches found then return 0 and matches is empty.")
+            XCTAssert(matches.isEmpty && count == 0, "If no matches found then return 0 and matches is empty.")
         }
 
         do {
@@ -612,7 +613,7 @@ class TestNSString : XCTestCase {
             var matches: [String] = []
             let count = path.completePath(into: &outName, caseSensitive: false, matchesInto: &matches, filterTypes: nil)
             XCTAssert(outName == "", "If no matches found then outName is nil.")
-            XCTAssert(matches.count == 0 && count == 0, "If no matches found then return 0 and matches is empty.")
+            XCTAssert(matches.isEmpty && count == 0, "If no matches found then return 0 and matches is empty.")
         }
 
         do {
@@ -1077,6 +1078,7 @@ class TestNSString : XCTestCase {
             NSString(string: "scratch..tiff") : "scratch.",
             NSString(string: ".tiff") : ".tiff",
             NSString(string: "/") : "/",
+            NSString(string: "..") : "..",
         ]
         for (fileName, expectedResult) in values {
             let result = fileName.deletingPathExtension
@@ -1158,68 +1160,97 @@ class TestNSString : XCTestCase {
 
     func test_substringWithRange() {
         let trivial = NSString(string: "swift.org")
-        XCTAssertEqual(trivial.substring(with: NSMakeRange(0, 5)), "swift")
+        XCTAssertEqual(trivial.substring(with: NSRange(location: 0, length: 5)), "swift")
 
         let surrogatePairSuffix = NSString(string: "Hurray🎉")
-        XCTAssertEqual(surrogatePairSuffix.substring(with: NSMakeRange(0, 7)), "Hurray�")
+        XCTAssertEqual(surrogatePairSuffix.substring(with: NSRange(location: 0, length: 7)), "Hurray�")
 
         let surrogatePairPrefix = NSString(string: "🐱Cat")
-        XCTAssertEqual(surrogatePairPrefix.substring(with: NSMakeRange(1, 4)), "�Cat")
+        XCTAssertEqual(surrogatePairPrefix.substring(with: NSRange(location: 1, length: 4)), "�Cat")
 
         let singleChar = NSString(string: "😹")
-        XCTAssertEqual(singleChar.substring(with: NSMakeRange(0,1)), "�")
+        XCTAssertEqual(singleChar.substring(with: NSRange(location: 0, length: 1)), "�")
 
         let crlf = NSString(string: "\r\n")
-        XCTAssertEqual(crlf.substring(with: NSMakeRange(0,1)), "\r")
-        XCTAssertEqual(crlf.substring(with: NSMakeRange(1,1)), "\n")
-        XCTAssertEqual(crlf.substring(with: NSMakeRange(1,0)), "")
+        XCTAssertEqual(crlf.substring(with: NSRange(location: 0, length: 1)), "\r")
+        XCTAssertEqual(crlf.substring(with: NSRange(location: 1, length: 1)), "\n")
+        XCTAssertEqual(crlf.substring(with: NSRange(location: 1, length: 0)), "")
 
         let bothEnds1 = NSString(string: "😺😺")
-        XCTAssertEqual(bothEnds1.substring(with: NSMakeRange(1,2)), "��") 
+        XCTAssertEqual(bothEnds1.substring(with: NSRange(location: 1, length: 2)), "��") 
 
         let s1 = NSString(string: "😺\r\n")
-        XCTAssertEqual(s1.substring(with: NSMakeRange(1,2)), "�\r")
+        XCTAssertEqual(s1.substring(with: NSRange(location: 1, length: 2)), "�\r")
 
         let s2 = NSString(string: "\r\n😺")
-        XCTAssertEqual(s2.substring(with: NSMakeRange(1,2)), "\n�")
+        XCTAssertEqual(s2.substring(with: NSRange(location: 1, length: 2)), "\n�")
 
         let s3 = NSString(string: "😺cats😺")
-        XCTAssertEqual(s3.substring(with: NSMakeRange(1,6)), "�cats�")
+        XCTAssertEqual(s3.substring(with: NSRange(location: 1, length: 6)), "�cats�")
 
         let s4 = NSString(string: "😺cats\r\n")
-        XCTAssertEqual(s4.substring(with: NSMakeRange(1,6)), "�cats\r")
+        XCTAssertEqual(s4.substring(with: NSRange(location: 1, length: 6)), "�cats\r")
 
         let s5 = NSString(string: "\r\ncats😺")
-        XCTAssertEqual(s5.substring(with: NSMakeRange(1,6)), "\ncats�")
+        XCTAssertEqual(s5.substring(with: NSRange(location: 1, length: 6)), "\ncats�")
 
         // SR-3363
         let s6 = NSString(string: "Beyonce\u{301} and Tay")
-        XCTAssertEqual(s6.substring(with: NSMakeRange(7, 9)), "\u{301} and Tay")
+        XCTAssertEqual(s6.substring(with: NSRange(location: 7, length: 9)), "\u{301} and Tay")
+    }
+    
+    func test_createCopy() {
+        let string: NSMutableString = "foo"
+        let stringCopy = string.copy() as! NSString
+        XCTAssertEqual(string, stringCopy)
+        string.append("bar")
+        XCTAssertNotEqual(string, stringCopy)
+        XCTAssertEqual(string, "foobar")
+        XCTAssertEqual(stringCopy, "foo")
     }
 }
 
 struct ComparisonTest {
+    enum TestBehavior {
+      case run
+      case expectedFailure(String)
+      case skip(String)
+    }
     let lhs: String
     let rhs: String
     let loc: UInt
-    let reason: String
+    let behavior: TestBehavior
 
-    var xfail: Bool {
-      return !reason.isEmpty
+    var expectedFailure: Bool {
+      if case .expectedFailure = behavior {
+        return true
+      } else {
+        return false
+      }
     }
 
     init(
-        _ lhs: String, _ rhs: String,
-          reason: String = "", line: UInt = #line
-    ) {
-        self.lhs = lhs
-        self.rhs = rhs
-        self.reason = reason
-        self.loc = line
+      _ lhs: String, _ rhs: String,
+      expectedFailure xfailReason: String = "",
+      skip skipReason: String = "",
+      line: UInt = #line
+      ) {
+      self.lhs = lhs
+      self.rhs = rhs
+      self.loc = line
+    
+      switch (xfailReason.isEmpty, skipReason.isEmpty) {
+      case (false, true):
+        behavior = .expectedFailure(xfailReason)
+      case (_, false):
+        behavior = .skip(skipReason)
+      default:
+        behavior = .run
+      }
     }
 }
 
-let comparisonTests = [
+let comparisonTests: [ComparisonTest] = [
     ComparisonTest("", ""),
     ComparisonTest("", "a"),
 
@@ -1227,20 +1258,14 @@ let comparisonTests = [
     ComparisonTest("t", "tt"),
     ComparisonTest("t", "Tt"),
     ComparisonTest("\u{0}", "",
-        reason: {
-#if _runtime(_ObjC)
-    return ""
-#else
-    return "https://bugs.swift.org/browse/SR-332"
-#endif
-    }()),
+        skip: "rdar://problem/37686816"),
     ComparisonTest("\u{0}", "\u{0}",
-        reason: "https://bugs.swift.org/browse/SR-332"),
+        expectedFailure: "https://bugs.swift.org/browse/SR-332"),
     ComparisonTest("\r\n", "t"),
     ComparisonTest("\r\n", "\n",
-        reason: "blocked on rdar://problem/19036555"),
+        expectedFailure: "blocked on rdar://problem/19036555"),
     ComparisonTest("\u{0}", "\u{0}\u{0}",
-        reason: "rdar://problem/19034601"),
+        expectedFailure: "rdar://problem/19034601"),
 
     // Whitespace
     // U+000A LINE FEED (LF)
@@ -1304,7 +1329,7 @@ let comparisonTests = [
     // U+1F1E7 REGIONAL INDICATOR SYMBOL LETTER B
     // \u{1F1E7}\u{1F1E7} Flag of Barbados
     ComparisonTest("\u{1F1E7}", "\u{1F1E7}\u{1F1E7}",
-        reason: "https://bugs.swift.org/browse/SR-367"),
+        expectedFailure: "https://bugs.swift.org/browse/SR-367"),
 
     // Test that Unicode collation is performed in deterministic mode.
     //
@@ -1320,7 +1345,7 @@ let comparisonTests = [
     // U+0301 and U+0954 don't decompose in the canonical decomposition mapping.
     // U+0341 has a canonical decomposition mapping of U+0301.
     ComparisonTest("\u{0301}", "\u{0341}",
-        reason: "https://bugs.swift.org/browse/SR-243"),
+        expectedFailure: "https://bugs.swift.org/browse/SR-243"),
     ComparisonTest("\u{0301}", "\u{0954}"),
     ComparisonTest("\u{0341}", "\u{0954}"),
 ]
@@ -1380,6 +1405,10 @@ func checkHasPrefixHasSuffix(_ lhs: String, _ rhs: String, _ stack: [UInt]) -> I
 extension TestNSString {
     func test_PrefixSuffix() {
         for test in comparisonTests {
+            if case .skip = test.behavior {
+              continue
+            }
+          
             var failures = 0
             failures += checkHasPrefixHasSuffix(test.lhs, test.rhs, [test.loc, #line])
             failures += checkHasPrefixHasSuffix(test.rhs, test.lhs, [test.loc, #line])
@@ -1395,9 +1424,9 @@ extension TestNSString {
             let fail = (failures > 0)
             if fail {
                 // print("Prefix/Suffix case \(test.loc): \(failures) failures")
-                // print("Failures were\(test.xfail ? "" : " not") expected")
+                // print("Failures were\(test.expectedFailure ? "" : " not") expected")
             }
-            XCTAssert(test.xfail == fail, "Unexpected \(test.xfail ?"success":"failure"): \(test.loc)")
+            XCTAssert(test.expectedFailure == fail, "Unexpected \(test.expectedFailure ?"success":"failure"): \(test.loc)")
         }
     }
 }

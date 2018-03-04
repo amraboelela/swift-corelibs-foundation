@@ -316,18 +316,18 @@ typedef pthread_t _CFThreadRef;
 
 CF_EXPORT _CFThreadRef _CFThreadCreate(const _CFThreadAttributes attrs, void *_Nullable (* _Nonnull startfn)(void *_Nullable), void *restrict _Nullable context);
 
-CF_SWIFT_EXPORT int _CFThreadSetName(pthread_t thread, const char *_Nonnull name);
-CF_SWIFT_EXPORT int _CFThreadGetName(char *_Nonnull buf, int length);
+CF_CROSS_PLATFORM_EXPORT int _CFThreadSetName(pthread_t thread, const char *_Nonnull name);
+CF_CROSS_PLATFORM_EXPORT int _CFThreadGetName(char *_Nonnull buf, int length);
 
 CF_EXPORT Boolean _CFCharacterSetIsLongCharacterMember(CFCharacterSetRef theSet, UTF32Char theChar);
 CF_EXPORT CFCharacterSetRef _CFCharacterSetCreateCopy(CFAllocatorRef alloc, CFCharacterSetRef theSet);
 CF_EXPORT CFMutableCharacterSetRef _CFCharacterSetCreateMutableCopy(CFAllocatorRef alloc, CFCharacterSetRef theSet);
 
-CF_EXPORT CFReadStreamRef CFReadStreamCreateWithData(CFAllocatorRef alloc, CFDataRef data);
+CF_EXPORT _Nullable CFErrorRef CFReadStreamCopyError(CFReadStreamRef stream);
 
-CF_EXPORT _Nullable CFErrorRef _CFReadStreamCopyError(CFReadStreamRef stream);
+CF_EXPORT _Nullable CFErrorRef CFWriteStreamCopyError(CFWriteStreamRef stream);
 
-CF_EXPORT _Nullable CFErrorRef _CFWriteStreamCopyError(CFWriteStreamRef stream);
+CF_CROSS_PLATFORM_EXPORT Boolean _CFBundleSupportsFHSBundles(void);
 
 // https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
 // Version 0.8
