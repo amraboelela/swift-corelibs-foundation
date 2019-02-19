@@ -1,13 +1,14 @@
 /*	CFOldStylePList.c
- Copyright (c) 1999-2017, Apple Inc. and the Swift project authors
+ Copyright (c) 1999-2018, Apple Inc. and the Swift project authors
  
- Portions Copyright (c) 2014-2017, Apple Inc. and the Swift project authors
+ Portions Copyright (c) 2014-2018, Apple Inc. and the Swift project authors
  Licensed under Apache License v2.0 with Runtime Library Exception
  See http://swift.org/LICENSE.txt for license information
  See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
  Responsibility: Tony Parker
  */
 
+#include <CoreFoundation/CFBase.h>
 #include <CoreFoundation/CFPropertyList.h>
 #include <CoreFoundation/CFDate.h>
 #include <CoreFoundation/CFNumber.h>
@@ -18,6 +19,7 @@
 #include <CoreFoundation/CFSet.h>
 
 #include <ctype.h>
+#include "CFOverflow.h"
 
 //
 // Old NeXT-style property lists
@@ -367,7 +369,7 @@ static CFStringRef parsePlistString(_CFStringsFileParseInfo *pInfo, bool require
 // when this returns yes, pInfo->error will be set
 static BOOL depthIsInvalid(_CFStringsFileParseInfo *pInfo, const uint32_t depth) {
     BOOL invalid = NO;
-#if __LP64__
+#if TARGET_RT_64_BIT
 #define MAX_DEPTH 512
 #else
 #define MAX_DEPTH 256

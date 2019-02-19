@@ -1,13 +1,14 @@
 /*	CFUniChar.c
-	Copyright (c) 2001-2017, Apple Inc. and the Swift project authors
+	Copyright (c) 2001-2018, Apple Inc. and the Swift project authors
  
-	Portions Copyright (c) 2014-2017, Apple Inc. and the Swift project authors
+	Portions Copyright (c) 2014-2018, Apple Inc. and the Swift project authors
 	Licensed under Apache License v2.0 with Runtime Library Exception
 	See http://swift.org/LICENSE.txt for license information
 	See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 	Responsibility: Foundation Team
 */
 
+#include <CoreFoundation/CFBase.h>
 #include <CoreFoundation/CFByteOrder.h>
 #include "CFInternal.h"
 #include "CFUniChar.h" 
@@ -88,7 +89,7 @@ static const void *__CFGetSectDataPtr(const char *segname, const char *sectname,
     for (idx = 0; idx < cnt; idx++) {
        void *mh = (void *)_dyld_get_image_header(idx);
        if (mh != &_mh_dylib_header) continue;
-#if __LP64__
+#if TARGET_RT_64_BIT
        const struct section_64 *sect = getsectbynamefromheader_64((struct mach_header_64 *)mh, segname, sectname);
 #else
        const struct section *sect = getsectbynamefromheader((struct mach_header *)mh, segname, sectname);

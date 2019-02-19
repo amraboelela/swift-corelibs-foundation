@@ -118,6 +118,7 @@
 
 #define TARGET_OS_WIN32        TARGET_OS_WINDOWS
 #define TARGET_OS_MAC          TARGET_OS_DARWIN
+#define TARGET_OS_OSX          TARGET_OS_DARWIN
 
 #if __x86_64__
 #define TARGET_CPU_PPC          0
@@ -223,7 +224,7 @@
 #error unknown endian
 #endif
 
-#if __LP64__
+#if __LP64__ || __LLP64__ || __POINTER_WIDTH__-0 == 64
 #define TARGET_RT_64_BIT        1
 #else
 #define TARGET_RT_64_BIT        0

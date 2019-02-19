@@ -7,15 +7,6 @@
 // See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 
-#if DEPLOYMENT_RUNTIME_OBJC || os(Linux)
-    import Foundation
-    import XCTest
-#else
-    import SwiftFoundation
-    import SwiftXCTest
-#endif
-
-
 class TestNotificationQueue : XCTestCase {
     static var allTests : [(String, (TestNotificationQueue) -> () throws -> Void)] {
         return [
@@ -38,13 +29,11 @@ FIXME SR-4280 timeouts in TestNSNotificationQueue tests
 
     func test_defaultQueue() {
         let defaultQueue1 = NotificationQueue.default
-        XCTAssertNotNil(defaultQueue1)
         let defaultQueue2 = NotificationQueue.default
         XCTAssertEqual(defaultQueue1, defaultQueue2)
 
         executeInBackgroundThread() {
             let defaultQueueForBackgroundThread = NotificationQueue.default
-            XCTAssertNotNil(defaultQueueForBackgroundThread)
             XCTAssertEqual(defaultQueueForBackgroundThread, NotificationQueue.default)
             XCTAssertNotEqual(defaultQueueForBackgroundThread, defaultQueue1)
         }
@@ -114,15 +103,15 @@ FIXME SR-4280 timeouts in TestNSNotificationQueue tests
                 return
             }
 
-            // post 2 notifications for the RunLoopMode.defaultRunLoopMode mode
+            // post 2 notifications for the RunLoop.Mode.default mode
             queue.enqueue(notification, postingStyle: .now, coalesceMask: [], forModes: [runLoopMode])
             queue.enqueue(notification, postingStyle: .now)
-            // here we post notification for the RunLoopMode.commonModes. It shouldn't have any affect, because the timer is scheduled in RunLoopMode.defaultRunLoopMode.
+            // here we post notification for the RunLoop.Mode.common. It shouldn't have any affect, because the timer is scheduled in RunLoop.Mode.default.
             // The notification queue will only post the notification to its notification center if the run loop is in one of the modes provided in the array.
-            queue.enqueue(notification, postingStyle: .now, coalesceMask: [], forModes: [.commonModes])
+            queue.enqueue(notification, postingStyle: .now, coalesceMask: [], forModes: [.common])
         }
-        runLoop.add(dummyTimer, forMode: .defaultRunLoopMode)
-        let _ = runLoop.run(mode: .defaultRunLoopMode, before: endDate)
+        runLoop.add(dummyTimer, forMode: .default)
+        let _ = runLoop.run(mode: .default, before: endDate)
         XCTAssertEqual(numberOfCalls, 2)
         NotificationCenter.default.removeObserver(obs)
     }
@@ -230,7 +219,7 @@ FIXME SR-4280 timeouts in TestNSNotificationQueue tests
         let dummyTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { _ in
             e.fulfill()
         }
-        RunLoop.current.add(dummyTimer, forMode: .defaultRunLoopMode)
+        RunLoop.current.add(dummyTimer, forMode: .default)
         waitForExpectations(timeout: 0.1)
     }
 

@@ -1,5 +1,5 @@
 /*      CFBundle_Main.c
- Copyright (c) 1999-2017, Apple Inc. and the Swift project authors
+ Copyright (c) 1999-2018, Apple Inc. and the Swift project authors
  
  Portions Copyright (c) 2014-2017, Apple Inc. and the Swift project authors
  Licensed under Apache License v2.0 with Runtime Library Exception
@@ -23,8 +23,8 @@
 static Boolean _initedMainBundle = false;
 static CFBundleRef _mainBundle = NULL;
 static char __CFBundleMainID__[1026] = {0};
-CF_PRIVATE char *__CFBundleMainID = __CFBundleMainID__;
-static pthread_mutex_t _mainBundleLock = PTHREAD_MUTEX_INITIALIZER;
+char *__CFBundleMainID = __CFBundleMainID__;
+static _CFMutex _mainBundleLock = _CF_MUTEX_STATIC_INITIALIZER;
 
 #pragma mark -
 
@@ -40,7 +40,8 @@ static void _CFBundleInitializeMainBundleInfoDictionaryAlreadyLocked(CFStringRef
             if (executableName) CFRelease(executableName);
         }
 #if defined(BINARY_SUPPORT_DYLD)
-        if (_mainBundle->_binaryType == __CFBundleDYLDExecutableBinary) {
+        // We can fall into this case when the executable is sandboxed enough that it can't read its own executable file. We can still attempt to get the info dictionary from the main executable though. _CFBundleCreateInfoDictFromMainExecutable will correctly handle a case where the section does not exist.
+        if (_mainBundle->_binaryType == __CFBundleDYLDExecutableBinary || _mainBundle->_binaryType == __CFBundleUnreadableBinary) {
             if (_mainBundle->_infoDict) CFRelease(_mainBundle->_infoDict);
             _mainBundle->_infoDict = (CFDictionaryRef)_CFBundleCreateInfoDictFromMainExecutable();
         }
@@ -123,9 +124,9 @@ static CFBundleRef _CFBundleGetMainBundleAlreadyLocked(void) {
                 // Perform delayed final processing steps.
                 // This must be done after _isLoaded has been set, for security reasons (3624341).
                 // It is safe to unlock and re-lock here because we don't really do anything under the lock after we are done. It is just re-locked to satisfy the 'already locked' contract.
-                pthread_mutex_unlock(&_mainBundleLock);
+                _CFMutexUnlock(&_mainBundleLock);
                 _CFBundleInitPlugIn(_mainBundle);
-                pthread_mutex_lock(&_mainBundleLock);
+                _CFMutexLock(&_mainBundleLock);
             }
         }
         if (bundleURL) CFRelease(bundleURL);
@@ -163,8 +164,8 @@ CF_EXPORT CFURLRef _CFBundleCopyMainBundleExecutableURL(Boolean *looksLikeBundle
 
 CF_EXPORT CFBundleRef CFBundleGetMainBundle(void) {
     CFBundleRef mainBundle;
-    pthread_mutex_lock(&_mainBundleLock);
+    _CFMutexLock(&_mainBundleLock);
     mainBundle = _CFBundleGetMainBundleAlreadyLocked();
-    pthread_mutex_unlock(&_mainBundleLock);
+    _CFMutexUnlock(&_mainBundleLock);
     return mainBundle;
 }

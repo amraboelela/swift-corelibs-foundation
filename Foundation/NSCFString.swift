@@ -10,6 +10,7 @@
 
 import CoreFoundation
 
+@usableFromInline
 internal class _NSCFString : NSMutableString {
     required init(characters: UnsafePointer<unichar>, length: Int) {
         fatalError()
@@ -57,13 +58,13 @@ internal class _NSCFString : NSMutableString {
     }
 }
 
+@usableFromInline
 internal final class _NSCFConstantString : _NSCFString {
     internal var _ptr : UnsafePointer<UInt8> {
         // FIXME: Split expression as a work-around for slow type
         //        checking (tracked by SR-5322).
-        let offTemp1 = MemoryLayout<OpaquePointer>.size + MemoryLayout<Int32>.size
-        let offTemp2 = MemoryLayout<Int32>.size + MemoryLayout<_CFInfo>.size
-        let offset = offTemp1 + offTemp2
+        let offTemp1 = MemoryLayout<OpaquePointer>.size + MemoryLayout<uintptr_t>.size
+        let offset = offTemp1 + MemoryLayout<_CFInfo>.size
         let ptr = Unmanaged.passUnretained(self).toOpaque()
         return ptr.load(fromByteOffset: offset, as: UnsafePointer<UInt8>.self)
     }
@@ -71,9 +72,9 @@ internal final class _NSCFConstantString : _NSCFString {
     private var _lenOffset : Int {
         // FIXME: Split expression as a work-around for slow type
         //        checking (tracked by SR-5322).
-        let offTemp1 = MemoryLayout<OpaquePointer>.size + MemoryLayout<Int32>.size
-        let offTemp2 = MemoryLayout<Int32>.size + MemoryLayout<_CFInfo>.size
-        return offTemp1 + offTemp2 + MemoryLayout<UnsafePointer<UInt8>>.size
+        let offTemp1 = MemoryLayout<OpaquePointer>.size + MemoryLayout<uintptr_t>.size
+        let offset = offTemp1 + MemoryLayout<_CFInfo>.size
+        return offset + MemoryLayout<UnsafePointer<UInt8>>.size
     }
 
     private var _lenPtr :  UnsafeMutableRawPointer {
@@ -212,7 +213,8 @@ internal func _CFSwiftStringFastContents(_ str: AnyObject) -> UnsafePointer<UniC
 }
 
 internal func _CFSwiftStringGetCString(_ str: AnyObject, buffer: UnsafeMutablePointer<Int8>, maxLength: Int, encoding: CFStringEncoding) -> Bool {
-    return (str as! NSString).getCString(buffer, maxLength: maxLength, encoding: CFStringConvertEncodingToNSStringEncoding(encoding))
+    return (str as! NSString).getCString(buffer, maxLength: maxLength,
+                                         encoding: numericCast(CFStringConvertEncodingToNSStringEncoding(encoding)))
 }
 
 internal func _CFSwiftStringIsUnicode(_ str: AnyObject) -> Bool {

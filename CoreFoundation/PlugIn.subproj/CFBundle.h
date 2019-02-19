@@ -1,5 +1,5 @@
 /*	CFBundle.h
-	Copyright (c) 1999-2017, Apple Inc.  All rights reserved.
+	Copyright (c) 1999-2018, Apple Inc.  All rights reserved.
 */
 
 #if !defined(__COREFOUNDATION_CFBUNDLE__)
@@ -304,7 +304,7 @@ CFPlugInRef CFBundleGetPlugIn(CFBundleRef bundle);
 
 /* ==================== Resource Manager-Related API ==================== */
 
-#if __LP64__
+#if TARGET_RT_64_BIT
 typedef int CFBundleRefNum;
 #else
 typedef SInt16 CFBundleRefNum;

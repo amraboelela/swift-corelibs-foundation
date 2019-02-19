@@ -10,13 +10,7 @@
 
 import CoreFoundation
 
-#if os(OSX) || os(iOS)
-import Darwin
-#elseif os(Linux) || CYGWIN
-import Glibc
-#endif
-
-#if os(OSX) || os(iOS)
+#if os(macOS) || os(iOS)
 internal let kCFURLPOSIXPathStyle = CFURLPathStyle.cfurlposixPathStyle
 internal let kCFURLWindowsPathStyle = CFURLPathStyle.cfurlWindowsPathStyle
 #endif
@@ -255,7 +249,11 @@ open class NSURL : NSObject, NSSecureCoding, NSCopying {
     }
     
     open override var description: String {
-        return self.absoluteString
+        if self.relativeString != self.absoluteString {
+            return "\(self.relativeString) -- \(self.baseURL!)"
+        } else {
+            return self.absoluteString
+        }
     }
 
     deinit {
@@ -495,7 +493,7 @@ open class NSURL : NSObject, NSSecureCoding, NSCopying {
     
     open var password: String? {
         let absoluteURL = CFURLCopyAbsoluteURL(_cfObject)
-#if os(Linux) || os(Android) || CYGWIN
+#if os(Linux) || os(Android) || os(Windows)
         let passwordRange = CFURLGetByteRangeForComponent(absoluteURL, kCFURLComponentPassword, nil)
 #else
         let passwordRange = CFURLGetByteRangeForComponent(absoluteURL, .password, nil)
@@ -558,14 +556,16 @@ open class NSURL : NSObject, NSSecureCoding, NSCopying {
     
     // Memory leak. See https://github.com/apple/swift-corelibs-foundation/blob/master/Docs/Issues.md
     open var fileSystemRepresentation: UnsafePointer<Int8> {
-        
+
+#if os(Windows)
+        let bufSize = Int(MAX_PATH + 1)
+#else
         let bufSize = Int(PATH_MAX + 1)
-        
+#endif
+
         let _fsrBuffer = UnsafeMutablePointer<Int8>.allocate(capacity: bufSize)
-        for i in 0..<bufSize {
-            _fsrBuffer.advanced(by: i).initialize(to: 0)
-        }
-        
+        _fsrBuffer.initialize(repeating: 0, count: bufSize)
+
         if getFileSystemRepresentation(_fsrBuffer, maxLength: bufSize) {
             return UnsafePointer(_fsrBuffer)
         }
@@ -609,8 +609,7 @@ open class NSURL : NSObject, NSSecureCoding, NSCopying {
         guard isFileURL,
             let path = path else {
                 throw NSError(domain: NSCocoaErrorDomain,
-                              code: CocoaError.Code.fileNoSuchFile.rawValue)
-                //return false
+                              code: CocoaError.Code.fileReadUnsupportedScheme.rawValue)
         }
         
         guard FileManager.default.fileExists(atPath: path) else {
@@ -619,7 +618,6 @@ open class NSURL : NSObject, NSSecureCoding, NSCopying {
                           userInfo: [
                             "NSURL" : self,
                             "NSFilePath" : path])
-            //return false
         }
         
         return true
@@ -953,19 +951,13 @@ open class NSURLQueryItem : NSObject, NSSecureCoding, NSCopying {
                     && other.value == self.value)
     }
     
-    open let name: String
-    open let value: String?
+    open private(set) var name: String
+    open private(set) var value: String?
 }
 
 open class NSURLComponents: NSObject, NSCopying {
-    private let _components : CFURLComponentsRef!
+    private let _components : CFURLComponents!
     
-     deinit {
-        if let component = _components {
-            __CFURLComponentsDeallocate(component)
-        }
-    }
-
     open override func copy() -> Any {
         return copy(with: nil)
     }
@@ -981,6 +973,19 @@ open class NSURLComponents: NSObject, NSCopying {
                 && path == other.path
                 && query == other.query
                 && fragment == other.fragment)
+    }
+
+    open override var hash: Int {
+        var hasher = Hasher()
+        hasher.combine(scheme)
+        hasher.combine(user)
+        hasher.combine(password)
+        hasher.combine(host)
+        hasher.combine(port)
+        hasher.combine(path)
+        hasher.combine(query)
+        hasher.combine(fragment)
+        return hasher.finalize()
     }
 
     open func copy(with zone: NSZone? = nil) -> Any {

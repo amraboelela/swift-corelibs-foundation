@@ -9,7 +9,7 @@
 
 import CoreFoundation
 
-#if os(OSX) || os(iOS)
+#if os(macOS) || os(iOS)
 internal extension UInt {
     init(_ status: CFStreamStatus) {
         self.init(status.rawValue)
@@ -94,11 +94,11 @@ open class Stream: NSObject {
 
 // Re-enable once run loop is compiled on all platforms
 
-    open func schedule(in aRunLoop: RunLoop, forMode mode: RunLoopMode) {
+    open func schedule(in aRunLoop: RunLoop, forMode mode: RunLoop.Mode) {
         NSUnimplemented()
     }
     
-    open func remove(from aRunLoop: RunLoop, forMode mode: RunLoopMode) {
+    open func remove(from aRunLoop: RunLoop, forMode mode: RunLoop.Mode) {
         NSUnimplemented()
     }
     

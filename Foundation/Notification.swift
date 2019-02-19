@@ -36,11 +36,11 @@ public struct Notification : ReferenceConvertible, Equatable, Hashable {
         self.object = object
         self.userInfo = userInfo
     }
-    
-    public var hashValue: Int {
-        return name.rawValue.hash
-    }
 
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(name)
+    }
+    
     public var description: String {
         var description = "name = \(name.rawValue)"
         if let obj = object { description += ", object = \(obj)" }
@@ -61,7 +61,7 @@ public struct Notification : ReferenceConvertible, Equatable, Hashable {
         }
         if let lhsObj = lhs.object {
             if let rhsObj = rhs.object {
-                if _SwiftValue.store(lhsObj) !== _SwiftValue.store(rhsObj) {
+                if __SwiftValue.store(lhsObj) !== __SwiftValue.store(rhsObj) {
                     return false
                 }
             } else {
@@ -91,7 +91,7 @@ extension Notification : CustomReflectable {
 }
 
 
-extension Notification : _ObjectTypeBridgeable {
+extension Notification : _ObjectiveCBridgeable {
     public static func _getObjectiveCType() -> Any.Type {
         return NSNotification.self
     }

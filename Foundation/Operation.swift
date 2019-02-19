@@ -130,7 +130,7 @@ open class Operation : NSObject {
         _dependencies.remove(op)
         op.lock.lock()
 #if DEPLOYMENT_ENABLE_LIBDISPATCH
-        let groupIndex = op._groups.index(where: { $0 === self._depGroup })
+        let groupIndex = op._groups.firstIndex(where: { $0 === self._depGroup })
         if let idx = groupIndex {
             let group = op._groups.remove(at: idx)
             group.leave()
@@ -186,6 +186,16 @@ extension Operation {
             finish()
         }
     }
+    
+    public func willChangeValue<Value>(for keyPath: KeyPath<Operation, Value>) {
+        // do nothing
+    }
+    
+    public func didChangeValue<Value>(for keyPath: KeyPath<Operation, Value>) {
+        if keyPath == \Operation.isFinished {
+            finish()
+        }
+    }
 }
 
 extension Operation {
@@ -230,7 +240,7 @@ open class BlockOperation: Operation {
     }
 }
 
-public extension OperationQueue {
+extension OperationQueue {
     public static let defaultMaxConcurrentOperationCount: Int = Int.max
 }
 
@@ -259,28 +269,28 @@ internal struct _OperationList {
     }
     
     mutating func remove(_ operation: Operation) {
-        if let idx = all.index(of: operation) {
+        if let idx = all.firstIndex(of: operation) {
             all.remove(at: idx)
         }
         switch operation.queuePriority {
         case .veryLow:
-            if let idx = veryLow.index(of: operation) {
+            if let idx = veryLow.firstIndex(of: operation) {
                 veryLow.remove(at: idx)
             }
         case .low:
-            if let idx = low.index(of: operation) {
+            if let idx = low.firstIndex(of: operation) {
                 low.remove(at: idx)
             }
         case .normal:
-            if let idx = normal.index(of: operation) {
+            if let idx = normal.firstIndex(of: operation) {
                 normal.remove(at: idx)
             }
         case .high:
-            if let idx = high.index(of: operation) {
+            if let idx = high.firstIndex(of: operation) {
                 high.remove(at: idx)
             }
         case .veryHigh:
-            if let idx = veryHigh.index(of: operation) {
+            if let idx = veryHigh.firstIndex(of: operation) {
                 veryHigh.remove(at: idx)
             }
         }
@@ -326,6 +336,7 @@ open class OperationQueue: NSObject {
         }
     }
     let queueGroup = DispatchGroup()
+    var unscheduledWorkItems: [DispatchWorkItem] = []
 #endif
     
     var _operations = _OperationList()
@@ -364,9 +375,6 @@ open class OperationQueue: NSObject {
                 }
             }
             let queue = DispatchQueue(label: effectiveName, attributes: attr)
-            if _suspended {
-                queue.suspend()
-            }
             __underlyingQueue = queue
             lock.unlock()
             return queue
@@ -432,13 +440,13 @@ open class OperationQueue: NSObject {
             _operations.insert(operation)
         }
         lock.unlock()
-        ops.forEach { (operation: Operation) -> Void in
 #if DEPLOYMENT_ENABLE_LIBDISPATCH
+        let items = ops.map { (operation: Operation) -> DispatchWorkItem in
             if let group = waitGroup {
                 group.enter()
             }
 
-            let block = DispatchWorkItem(flags: .enforceQoS) { () -> Void in
+            return DispatchWorkItem(flags: .enforceQoS) { () -> Void in
                 if let sema = self._concurrencyGate {
                     sema.wait()
                     self._runOperation()
@@ -450,10 +458,17 @@ open class OperationQueue: NSObject {
                     group.leave()
                 }
             }
-            _underlyingQueue.async(group: queueGroup, execute: block)
-#endif
         }
-#if DEPLOYMENT_ENABLE_LIBDISPATCH
+
+        let queue = _underlyingQueue
+        lock.lock()
+        if _suspended {
+            unscheduledWorkItems += items
+        } else {
+            items.forEach { queue.async(group: queueGroup, execute: $0) }
+        }
+        lock.unlock()
+
         if let group = waitGroup {
             group.wait()
         }
@@ -498,19 +513,16 @@ open class OperationQueue: NSObject {
         }
         set {
             lock.lock()
-            if _suspended != newValue {
-                _suspended = newValue
-#if DEPLOYMENT_ENABLE_LIBDISPATCH
-                if let queue = __underlyingQueue {
-                    if newValue {
-                        queue.suspend()
-                    } else {
-                        queue.resume()
-                    }
-                }
-#endif
-            }
+            _suspended = newValue
+            let items = unscheduledWorkItems
+            unscheduledWorkItems.removeAll()
             lock.unlock()
+
+            if !newValue {
+                items.forEach {
+                    _underlyingQueue.async(group: queueGroup, execute: $0)
+                }
+            }
         }
     }
     

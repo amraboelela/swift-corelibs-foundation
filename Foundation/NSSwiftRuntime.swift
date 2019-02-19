@@ -12,15 +12,22 @@ import CoreFoundation
 
 // Re-export Darwin and Glibc by importing Foundation
 // This mimics the behavior of the swift sdk overlay on Darwin
-#if os(OSX) || os(iOS)
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS)
 @_exported import Darwin
 #elseif os(Linux) || os(Android) || CYGWIN
 @_exported import Glibc
+#elseif os(Windows)
+@_exported import MSVCRT
 #endif
 
 @_exported import Dispatch
 
-#if os(Android) // shim required for bzero
+#if os(Windows)
+import WinSDK
+#endif
+
+// shim required for bzero
+#if os(Android) || os(Windows)
 @_transparent func bzero(_ ptr: UnsafeMutableRawPointer, _ size: size_t) {
     memset(ptr, 0, size)
 }
@@ -34,8 +41,8 @@ import CoreFoundation
 /// ObjCBool.
 @_fixed_layout
 public struct ObjCBool : ExpressibleByBooleanLiteral {
-    #if os(OSX) || (os(iOS) && (arch(i386) || arch(arm)))
-    // On OS X and 32-bit iOS, Objective-C's BOOL type is a "signed char".
+    #if os(macOS) || (os(iOS) && (arch(i386) || arch(arm)))
+    // On macOS and 32-bit iOS, Objective-C's BOOL type is a "signed char".
     var _value: Int8
 
     init(_ value: Int8) {
@@ -57,7 +64,7 @@ public struct ObjCBool : ExpressibleByBooleanLiteral {
 
     /// The value of `self`, expressed as a `Bool`.
     public var boolValue: Bool {
-        #if os(OSX) || (os(iOS) && (arch(i386) || arch(arm)))
+        #if os(macOS) || (os(iOS) && (arch(i386) || arch(arm)))
         return _value != 0
         #else
         return _value
@@ -86,12 +93,13 @@ extension ObjCBool : CustomStringConvertible {
 }
 #endif
 
+@usableFromInline
 internal class __NSCFType : NSObject {
-    private var _cfinfo : Int32
+    private var _cfinfo : _CFInfo
     
     override init() {
         // This is not actually called; _CFRuntimeCreateInstance will initialize _cfinfo
-        _cfinfo = 0
+        _cfinfo = _CFInfo(typeID: 0)
     }
     
     override var hash: Int {
@@ -140,13 +148,13 @@ internal func _CFZeroUnsafeIvars<T>(_ arg: inout T) {
     }
 }
 
-@_versioned
+@usableFromInline
 @_cdecl("__CFSwiftGetBaseClass")
 internal func __CFSwiftGetBaseClass() -> UnsafeRawPointer {
     return unsafeBitCast(__NSCFType.self, to:UnsafeRawPointer.self)
 }
 
-@_versioned
+@usableFromInline
 @_cdecl("__CFInitializeSwift")
 internal func __CFInitializeSwift() {
     
@@ -286,6 +294,20 @@ internal func __CFInitializeSwift() {
     __CFSwiftBridge.NSNumber._getValue = _CFSwiftNumberGetValue
     __CFSwiftBridge.NSNumber.boolValue = _CFSwiftNumberGetBoolValue
     
+    __CFSwiftBridge.NSData.copy = _CFSwiftDataCreateCopy
+    
+    __CFSwiftBridge.NSCalendar.calendarIdentifier = _CFSwiftCalendarGetCalendarIdentifier
+    __CFSwiftBridge.NSCalendar.copyLocale = _CFSwiftCalendarCopyLocale
+    __CFSwiftBridge.NSCalendar.setLocale = _CFSwiftCalendarSetLocale
+    __CFSwiftBridge.NSCalendar.copyTimeZone = _CFSwiftCalendarCopyTimeZone
+    __CFSwiftBridge.NSCalendar.setTimeZone = _CFSwiftCalendarSetTimeZone
+    __CFSwiftBridge.NSCalendar.firstWeekday = _CFSwiftCalendarGetFirstWeekday
+    __CFSwiftBridge.NSCalendar.setFirstWeekday = _CFSwiftCalendarSetFirstWeekday
+    __CFSwiftBridge.NSCalendar.minimumDaysInFirstWeek = _CFSwiftCalendarGetMinimumDaysInFirstWeek
+    __CFSwiftBridge.NSCalendar.setMinimumDaysInFirstWeek = _CFSwiftCalendarSetMinimumDaysInFirstWeek
+    __CFSwiftBridge.NSCalendar.copyGregorianStartDate = _CFSwiftCalendarCopyGregorianStartDate
+    __CFSwiftBridge.NSCalendar.setGregorianStartDate = _CFSwiftCalendarSetGregorianStartDate
+    
 //    __CFDefaultEightBitStringEncoding = UInt32(kCFStringEncodingUTF8)
 }
 
@@ -353,7 +375,7 @@ extension Array {
 }
 
 
-#if os(OSX) || os(iOS)
+#if os(macOS) || os(iOS)
     internal typealias _DarwinCompatibleBoolean = DarwinBoolean
 #else
     internal typealias _DarwinCompatibleBoolean = Bool

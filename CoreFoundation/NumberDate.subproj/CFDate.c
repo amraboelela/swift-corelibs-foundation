@@ -1,7 +1,7 @@
 /*	CFDate.c
-	Copyright (c) 1998-2017, Apple Inc. and the Swift project authors
+	Copyright (c) 1998-2018, Apple Inc. and the Swift project authors
  
-	Portions Copyright (c) 2014-2017, Apple Inc. and the Swift project authors
+	Portions Copyright (c) 2014-2018, Apple Inc. and the Swift project authors
 	Licensed under Apache License v2.0 with Runtime Library Exception
 	See http://swift.org/LICENSE.txt for license information
 	See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
@@ -15,6 +15,7 @@
 #include <CoreFoundation/CFString.h>
 #include <CoreFoundation/CFNumber.h>
 #include "CFInternal.h"
+#include "CFRuntime_Internal.h"
 #include <math.h>
 
 #if __HAS_DISPATCH__
@@ -40,7 +41,8 @@
 const CFTimeInterval kCFAbsoluteTimeIntervalSince1970 = 978307200.0L;
 const CFTimeInterval kCFAbsoluteTimeIntervalSince1904 = 3061152000.0L;
 
-CF_PRIVATE double __CFTSRRate = 0.0;
+CF_PRIVATE double __CFTSRRate;
+double __CFTSRRate = 0.0;
 static double __CF1_TSRRate = 0.0;
 
 CF_PRIVATE uint64_t __CFTimeIntervalToTSR(CFTimeInterval ti) {
@@ -81,6 +83,17 @@ CF_PRIVATE dispatch_time_t __CFTSRToDispatchTime(uint64_t tsr) {
 }
 #endif
 
+#if TARGET_OS_WIN32
+CFAbsoluteTime CFAbsoluteTimeGetCurrent(void) {
+    SYSTEMTIME stTime;
+    FILETIME ftTime;
+
+    GetSystemTime(&stTime);
+    SystemTimeToFileTime(&stTime, &ftTime);
+
+    return (uint64_t)ftTime.dwLowDateTime + ((uint64_t)ftTime.dwHighDateTime << 32) - kCFAbsoluteTimeIntervalSince1970;
+}
+#else
 CFAbsoluteTime CFAbsoluteTimeGetCurrent(void) {
     CFAbsoluteTime ret;
     struct timeval tv;
@@ -89,6 +102,7 @@ CFAbsoluteTime CFAbsoluteTimeGetCurrent(void) {
     ret += (1.0E-6 * (CFTimeInterval)tv.tv_usec);
     return ret;
 }
+#endif
 
 #if DEPLOYMENT_RUNTIME_SWIFT
 CF_EXPORT CFTimeInterval CFGetSystemUptime(void) {
@@ -102,6 +116,9 @@ CF_EXPORT CFTimeInterval CFGetSystemUptime(void) {
         HALT;
     }
     return (double)res.tv_sec + ((double)res.tv_nsec)/1.0E9;
+#elif DEPLOYMENT_TARGET_WINDOWS
+    ULONGLONG ullTickCount = GetTickCount64();
+    return ullTickCount / 1000;
 #else
 #error Unable to calculate uptime for this platform
 #endif
@@ -130,9 +147,7 @@ static CFStringRef __CFDateCopyDescription(CFTypeRef cf) {
     return CFStringCreateWithFormat(CFGetAllocator(date), NULL, CFSTR("<CFDate %p [%p]>{time = %0.09g}"), cf, CFGetAllocator(date), date->_time);
 }
 
-static CFTypeID __kCFDateTypeID = _kCFRuntimeNotATypeID;
-
-static const CFRuntimeClass __CFDateClass = {
+const CFRuntimeClass __CFDateClass = {
     0,
     "CFDate",
     NULL,       // init
@@ -144,11 +159,7 @@ static const CFRuntimeClass __CFDateClass = {
     __CFDateCopyDescription
 };
 
-CFTypeID CFDateGetTypeID(void) {
-    static dispatch_once_t initOnce;
-    dispatch_once(&initOnce, ^{
-        __kCFDateTypeID = _CFRuntimeRegisterClass(&__CFDateClass); 
-
+CF_PRIVATE void __CFDateInitialize(void) {
 #if DEPLOYMENT_TARGET_MACOSX || DEPLOYMENT_TARGET_EMBEDDED || DEPLOYMENT_TARGET_EMBEDDED_MINI
     struct mach_timebase_info info;
     mach_timebase_info(&info);
@@ -171,8 +182,10 @@ CFTypeID CFDateGetTypeID(void) {
 #else
 #error Unable to initialize date
 #endif
-    });
-    return __kCFDateTypeID;
+}
+
+CFTypeID CFDateGetTypeID(void) {
+    return _kCFRuntimeIDCFDate;
 }
 
 CFDateRef CFDateCreate(CFAllocatorRef allocator, CFAbsoluteTime at) {
@@ -225,7 +238,7 @@ CF_INLINE double __CFDoubleMod(double d, int32_t modulus) {
 
 #define INVALID_MONTH_RESULT (0xffff)
 #define CHECK_BOUNDS(month, array) ((month) >= 0 && (month) < (sizeof(array) / sizeof(*(array))))
-#define ASSERT_VALID_MONTH(month) do { if (!((month) >= 1 && (month) <= 12)) { os_log_error(OS_LOG_DEFAULT, "Month %d is out of bounds", (int)month); /* HALT */ } } while(0)
+#define ASSERT_VALID_MONTH(month) do { if (!((month) >= 1 && (month) <= 12)) { /* os_log_error(OS_LOG_DEFAULT, "Month %d is out of bounds", (int)month); HALT */ } } while(0)
 
 static const uint8_t daysInMonth[16] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31, 0, 0, 0};
 static const uint16_t daysBeforeMonth[16] = {INVALID_MONTH_RESULT, 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334, 365, INVALID_MONTH_RESULT, INVALID_MONTH_RESULT};

@@ -169,8 +169,8 @@ public struct CharacterSet : ReferenceConvertible, Equatable, Hashable, SetAlgeb
         }
     }
     
-    public var hashValue: Int {
-        return _mapUnmanaged { $0.hashValue }
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(_mapUnmanaged { $0 })
     }
     
     public var description: String {
@@ -481,7 +481,7 @@ public struct CharacterSet : ReferenceConvertible, Equatable, Hashable, SetAlgeb
 
 
 // MARK: Objective-C Bridging
-extension CharacterSet : _ObjectTypeBridgeable {
+extension CharacterSet : _ObjectiveCBridgeable {
     public static func _isBridgedToObjectiveC() -> Bool {
         return true
     }

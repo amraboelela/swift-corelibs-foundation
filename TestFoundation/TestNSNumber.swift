@@ -7,16 +7,6 @@
 // See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 
-
-#if DEPLOYMENT_RUNTIME_OBJC || os(Linux)
-import Foundation
-import XCTest
-#else
-import SwiftFoundation
-import SwiftXCTest
-#endif
-
-
 class TestNSNumber : XCTestCase {
     static var allTests: [(String, (TestNSNumber) -> () throws -> Void)] {
         return [
@@ -45,6 +35,8 @@ class TestNSNumber : XCTestCase {
             ("test_objCType", test_objCType ),
             ("test_stringValue", test_stringValue),
             ("test_Equals", test_Equals),
+            ("test_boolValue", test_boolValue),
+            ("test_hash", test_hash),
         ]
     }
     
@@ -896,149 +888,306 @@ class TestNSNumber : XCTestCase {
     }
 
     func test_compareNumberWithBool() {
-        XCTAssertEqual(NSNumber(value: true).compare(NSNumber(value: true)), ComparisonResult.orderedSame)
-        XCTAssertEqual(NSNumber(value: true).compare(NSNumber(value: false)), ComparisonResult.orderedDescending)
-        XCTAssertEqual(NSNumber(value: false).compare(NSNumber(value: true)), ComparisonResult.orderedAscending)
+        XCTAssertEqual(NSNumber(value: true).compare(NSNumber(value: true)), .orderedSame)
+        XCTAssertEqual(NSNumber(value: true).compare(NSNumber(value: false)), .orderedDescending)
+        XCTAssertEqual(NSNumber(value: false).compare(NSNumber(value: true)), .orderedAscending)
 
-        XCTAssertEqual(NSNumber(value: false).compare(NSNumber(value: Int8(0))), ComparisonResult.orderedSame)
+        XCTAssertEqual(NSNumber(value: false).compare(NSNumber(value: Int8(0))), .orderedSame)
 #if !(os(Linux) && (arch(arm) || arch(powerpc64) || arch(powerpc64le)))
         // Linux/arm and Linux/power chars are unsigned, so Int8 in Swift, until this issue is resolved, these tests will always fail.
-        XCTAssertEqual(NSNumber(value: false).compare(NSNumber(value: Int8(-1))), ComparisonResult.orderedDescending)
+        XCTAssertEqual(NSNumber(value: false).compare(NSNumber(value: Int8(-1))), .orderedDescending)
 #endif
-        XCTAssertEqual(NSNumber(value: false).compare(NSNumber(value: Int8(1))), ComparisonResult.orderedAscending)
+        XCTAssertEqual(NSNumber(value: false).compare(NSNumber(value: Int8(1))), .orderedAscending)
 
-        XCTAssertEqual(NSNumber(value: true).compare(NSNumber(value: Int8(1))), ComparisonResult.orderedSame)
-        XCTAssertEqual(NSNumber(value: true).compare(NSNumber(value: Int8(0))), ComparisonResult.orderedDescending)
-        XCTAssertEqual(NSNumber(value: true).compare(NSNumber(value: Int8(2))), ComparisonResult.orderedAscending)
+        XCTAssertEqual(NSNumber(value: true).compare(NSNumber(value: Int8(1))), .orderedSame)
+        XCTAssertEqual(NSNumber(value: true).compare(NSNumber(value: Int8(0))), .orderedDescending)
+        XCTAssertEqual(NSNumber(value: true).compare(NSNumber(value: Int8(2))), .orderedAscending)
 
-        XCTAssertEqual(NSNumber(value: false).compare(NSNumber(value: Double(0))), ComparisonResult.orderedSame)
-        XCTAssertEqual(NSNumber(value: false).compare(NSNumber(value: Double(-0.1))), ComparisonResult.orderedDescending)
-        XCTAssertEqual(NSNumber(value: false).compare(NSNumber(value: Double(0.1))), ComparisonResult.orderedAscending)
+        XCTAssertEqual(NSNumber(value: false).compare(NSNumber(value: Double(0))), .orderedSame)
+        XCTAssertEqual(NSNumber(value: false).compare(NSNumber(value: Double(-0.1))), .orderedDescending)
+        XCTAssertEqual(NSNumber(value: false).compare(NSNumber(value: Double(0.1))), .orderedAscending)
 
-        XCTAssertEqual(NSNumber(value: true).compare(NSNumber(value: Double(1))), ComparisonResult.orderedSame)
-        XCTAssertEqual(NSNumber(value: true).compare(NSNumber(value: Double(0.9))), ComparisonResult.orderedDescending)
-        XCTAssertEqual(NSNumber(value: true).compare(NSNumber(value: Double(1.1))), ComparisonResult.orderedAscending)
+        XCTAssertEqual(NSNumber(value: true).compare(NSNumber(value: Double(1))), .orderedSame)
+        XCTAssertEqual(NSNumber(value: true).compare(NSNumber(value: Double(0.9))), .orderedDescending)
+        XCTAssertEqual(NSNumber(value: true).compare(NSNumber(value: Double(1.1))), .orderedAscending)
     }
 
     func test_compareNumberWithChar() {
-        XCTAssertEqual(NSNumber(value: Int8(42)).compare(NSNumber(value: Int8(42))), ComparisonResult.orderedSame)
-        XCTAssertEqual(NSNumber(value: Int8(42)).compare(NSNumber(value: Int8(0))), ComparisonResult.orderedDescending)
+        XCTAssertEqual(NSNumber(value: Int8(42)).compare(NSNumber(value: Int8(42))), .orderedSame)
+        XCTAssertEqual(NSNumber(value: Int8(42)).compare(NSNumber(value: Int8(0))), .orderedDescending)
 #if !(os(Linux) && (arch(arm) || arch(powerpc64) || arch(powerpc64le)))
         // Linux/arm and Linux/power chars are unsigned, so Int8 in Swift, until this issue is resolved, these tests will always fail.
-        XCTAssertEqual(NSNumber(value: Int8(-37)).compare(NSNumber(value: Int8(16))), ComparisonResult.orderedAscending)
+        XCTAssertEqual(NSNumber(value: Int8(-37)).compare(NSNumber(value: Int8(16))), .orderedAscending)
 #endif
 
-        XCTAssertEqual(NSNumber(value: Int8(1)).compare(NSNumber(value: true)), ComparisonResult.orderedSame)
-        XCTAssertEqual(NSNumber(value: Int8(1)).compare(NSNumber(value: false)), ComparisonResult.orderedDescending)
+        XCTAssertEqual(NSNumber(value: Int8(1)).compare(NSNumber(value: true)), .orderedSame)
+        XCTAssertEqual(NSNumber(value: Int8(1)).compare(NSNumber(value: false)), .orderedDescending)
 #if !(os(Linux) && (arch(arm) || arch(powerpc64) || arch(powerpc64le)))
         // Linux/arm and Linux/power chars are unsigned, so Int8 in Swift, until this issue is resolved, these tests will always fail.
-        XCTAssertEqual(NSNumber(value: Int8(-37)).compare(NSNumber(value: true)), ComparisonResult.orderedAscending)
+        XCTAssertEqual(NSNumber(value: Int8(-37)).compare(NSNumber(value: true)), .orderedAscending)
 #endif
 
-        XCTAssertEqual(NSNumber(value: Int8(42)).compare(NSNumber(value: UInt8(42))), ComparisonResult.orderedSame)
-        XCTAssertEqual(NSNumber(value: Int8(42)).compare(NSNumber(value: UInt8(16))), ComparisonResult.orderedDescending)
+        XCTAssertEqual(NSNumber(value: Int8(42)).compare(NSNumber(value: UInt8(42))), .orderedSame)
+        XCTAssertEqual(NSNumber(value: Int8(42)).compare(NSNumber(value: UInt8(16))), .orderedDescending)
 #if !(os(Linux) && (arch(arm) || arch(powerpc64) || arch(powerpc64le)))
         // Linux/arm and Linux/power chars are unsigned, so Int8 in Swift, until this issue is resolved, these tests will always fail.
-        XCTAssertEqual(NSNumber(value: Int8(-37)).compare(NSNumber(value: UInt8(255))), ComparisonResult.orderedAscending)
+        XCTAssertEqual(NSNumber(value: Int8(-37)).compare(NSNumber(value: UInt8(255))), .orderedAscending)
 #endif
 
-        XCTAssertEqual(NSNumber(value: Int8(42)).compare(NSNumber(value: Float(42))), ComparisonResult.orderedSame)
+        XCTAssertEqual(NSNumber(value: Int8(42)).compare(NSNumber(value: Float(42))), .orderedSame)
 #if !(os(Linux) && (arch(arm) || arch(powerpc64) || arch(powerpc64le)))
         // Linux/arm and Linux/power chars are unsigned, so Int8 in Swift, until this issue is resolved, these tests will always fail.
-        XCTAssertEqual(NSNumber(value: Int8(-16)).compare(NSNumber(value: Float(-37.5))), ComparisonResult.orderedDescending)
+        XCTAssertEqual(NSNumber(value: Int8(-16)).compare(NSNumber(value: Float(-37.5))), .orderedDescending)
 #endif
-        XCTAssertEqual(NSNumber(value: Int8(16)).compare(NSNumber(value: Float(16.1))), ComparisonResult.orderedAscending)
+        XCTAssertEqual(NSNumber(value: Int8(16)).compare(NSNumber(value: Float(16.1))), .orderedAscending)
     }
 
     func test_compareNumberWithUnsignedChar() {
-        XCTAssertEqual(NSNumber(value: UInt8(42)).compare(NSNumber(value: UInt8(42))), ComparisonResult.orderedSame)
-        XCTAssertEqual(NSNumber(value: UInt8(42)).compare(NSNumber(value: UInt8(0))), ComparisonResult.orderedDescending)
-//        XCTAssertEqual(NSNumber(value: UInt8(42)).compare(NSNumber(value: UInt8(255))), ComparisonResult.orderedAscending)
+        XCTAssertEqual(NSNumber(value: UInt8(42)).compare(NSNumber(value: UInt8(42))), .orderedSame)
+        XCTAssertEqual(NSNumber(value: UInt8(42)).compare(NSNumber(value: UInt8(0))), .orderedDescending)
+//        XCTAssertEqual(NSNumber(value: UInt8(42)).compare(NSNumber(value: UInt8(255))), .orderedAscending)
 
-        XCTAssertEqual(NSNumber(value: UInt8(1)).compare(NSNumber(value: true)), ComparisonResult.orderedSame)
-        XCTAssertEqual(NSNumber(value: UInt8(1)).compare(NSNumber(value: false)), ComparisonResult.orderedDescending)
-        XCTAssertEqual(NSNumber(value: UInt8(0)).compare(NSNumber(value: true)), ComparisonResult.orderedAscending)
+        XCTAssertEqual(NSNumber(value: UInt8(1)).compare(NSNumber(value: true)), .orderedSame)
+        XCTAssertEqual(NSNumber(value: UInt8(1)).compare(NSNumber(value: false)), .orderedDescending)
+        XCTAssertEqual(NSNumber(value: UInt8(0)).compare(NSNumber(value: true)), .orderedAscending)
 
-        XCTAssertEqual(NSNumber(value: UInt8(42)).compare(NSNumber(value: Int16(42))), ComparisonResult.orderedSame)
-        XCTAssertEqual(NSNumber(value: UInt8(0)).compare(NSNumber(value: Int16(-123))), ComparisonResult.orderedDescending)
-        XCTAssertEqual(NSNumber(value: UInt8(255)).compare(NSNumber(value: Int16(12345))), ComparisonResult.orderedAscending)
+        XCTAssertEqual(NSNumber(value: UInt8(42)).compare(NSNumber(value: Int16(42))), .orderedSame)
+        XCTAssertEqual(NSNumber(value: UInt8(0)).compare(NSNumber(value: Int16(-123))), .orderedDescending)
+        XCTAssertEqual(NSNumber(value: UInt8(255)).compare(NSNumber(value: Int16(12345))), .orderedAscending)
 
-        XCTAssertEqual(NSNumber(value: UInt8(42)).compare(NSNumber(value: Float(42))), ComparisonResult.orderedSame)
-        XCTAssertEqual(NSNumber(value: UInt8(0)).compare(NSNumber(value: Float(-37.5))), ComparisonResult.orderedDescending)
-        XCTAssertEqual(NSNumber(value: UInt8(255)).compare(NSNumber(value: Float(1234.5))), ComparisonResult.orderedAscending)
+        XCTAssertEqual(NSNumber(value: UInt8(42)).compare(NSNumber(value: Float(42))), .orderedSame)
+        XCTAssertEqual(NSNumber(value: UInt8(0)).compare(NSNumber(value: Float(-37.5))), .orderedDescending)
+        XCTAssertEqual(NSNumber(value: UInt8(255)).compare(NSNumber(value: Float(1234.5))), .orderedAscending)
     }
 
     func test_compareNumberWithShort() {
-        XCTAssertEqual(NSNumber(value: Int16(42)).compare(NSNumber(value: Int16(42))), ComparisonResult.orderedSame)
-        XCTAssertEqual(NSNumber(value: Int16(42)).compare(NSNumber(value: Int16(0))), ComparisonResult.orderedDescending)
-        XCTAssertEqual(NSNumber(value: Int16(-37)).compare(NSNumber(value: Int16(12345))), ComparisonResult.orderedAscending)
+        XCTAssertEqual(NSNumber(value: Int16(42)).compare(NSNumber(value: Int16(42))), .orderedSame)
+        XCTAssertEqual(NSNumber(value: Int16(42)).compare(NSNumber(value: Int16(0))), .orderedDescending)
+        XCTAssertEqual(NSNumber(value: Int16(-37)).compare(NSNumber(value: Int16(12345))), .orderedAscending)
 
-        XCTAssertEqual(NSNumber(value: Int16(1)).compare(NSNumber(value: true)), ComparisonResult.orderedSame)
-        XCTAssertEqual(NSNumber(value: Int16(1)).compare(NSNumber(value: false)), ComparisonResult.orderedDescending)
-        XCTAssertEqual(NSNumber(value: Int16(0)).compare(NSNumber(value: true)), ComparisonResult.orderedAscending)
+        XCTAssertEqual(NSNumber(value: Int16(1)).compare(NSNumber(value: true)), .orderedSame)
+        XCTAssertEqual(NSNumber(value: Int16(1)).compare(NSNumber(value: false)), .orderedDescending)
+        XCTAssertEqual(NSNumber(value: Int16(0)).compare(NSNumber(value: true)), .orderedAscending)
 
-        XCTAssertEqual(NSNumber(value: Int16(42)).compare(NSNumber(value: UInt8(42))), ComparisonResult.orderedSame)
-        XCTAssertEqual(NSNumber(value: Int16(42)).compare(NSNumber(value: UInt8(0))), ComparisonResult.orderedDescending)
-        XCTAssertEqual(NSNumber(value: Int16(-37)).compare(NSNumber(value: UInt8(255))), ComparisonResult.orderedAscending)
+        XCTAssertEqual(NSNumber(value: Int16(42)).compare(NSNumber(value: UInt8(42))), .orderedSame)
+        XCTAssertEqual(NSNumber(value: Int16(42)).compare(NSNumber(value: UInt8(0))), .orderedDescending)
+        XCTAssertEqual(NSNumber(value: Int16(-37)).compare(NSNumber(value: UInt8(255))), .orderedAscending)
 
-        XCTAssertEqual(NSNumber(value: Int16(42)).compare(NSNumber(value: Float(42))), ComparisonResult.orderedSame)
-        XCTAssertEqual(NSNumber(value: Int16(0)).compare(NSNumber(value: Float(-37.5))), ComparisonResult.orderedDescending)
-        XCTAssertEqual(NSNumber(value: Int16(255)).compare(NSNumber(value: Float(1234.5))), ComparisonResult.orderedAscending)
+        XCTAssertEqual(NSNumber(value: Int16(42)).compare(NSNumber(value: Float(42))), .orderedSame)
+        XCTAssertEqual(NSNumber(value: Int16(0)).compare(NSNumber(value: Float(-37.5))), .orderedDescending)
+        XCTAssertEqual(NSNumber(value: Int16(255)).compare(NSNumber(value: Float(1234.5))), .orderedAscending)
     }
 
     func test_compareNumberWithFloat() {
-        XCTAssertEqual(NSNumber(value: Float(42)).compare(NSNumber(value: Float(42))), ComparisonResult.orderedSame)
-        XCTAssertEqual(NSNumber(value: Float(42)).compare(NSNumber(value: Float(0))), ComparisonResult.orderedDescending)
-        XCTAssertEqual(NSNumber(value: Float(-37)).compare(NSNumber(value: Float(12345))), ComparisonResult.orderedAscending)
+        XCTAssertEqual(NSNumber(value: Float(42)).compare(NSNumber(value: Float(42))), .orderedSame)
+        XCTAssertEqual(NSNumber(value: Float(42)).compare(NSNumber(value: Float(0))), .orderedDescending)
+        XCTAssertEqual(NSNumber(value: Float(-37)).compare(NSNumber(value: Float(12345))), .orderedAscending)
 
-        XCTAssertEqual(NSNumber(value: Float(1)).compare(NSNumber(value: true)), ComparisonResult.orderedSame)
-        XCTAssertEqual(NSNumber(value: Float(0.1)).compare(NSNumber(value: false)), ComparisonResult.orderedDescending)
-        XCTAssertEqual(NSNumber(value: Float(0.9)).compare(NSNumber(value: true)), ComparisonResult.orderedAscending)
+        XCTAssertEqual(NSNumber(value: Float(1)).compare(NSNumber(value: true)), .orderedSame)
+        XCTAssertEqual(NSNumber(value: Float(0.1)).compare(NSNumber(value: false)), .orderedDescending)
+        XCTAssertEqual(NSNumber(value: Float(0.9)).compare(NSNumber(value: true)), .orderedAscending)
 
-        XCTAssertEqual(NSNumber(value: Float(42)).compare(NSNumber(value: UInt8(42))), ComparisonResult.orderedSame)
-        XCTAssertEqual(NSNumber(value: Float(0.1)).compare(NSNumber(value: UInt8(0))), ComparisonResult.orderedDescending)
-        XCTAssertEqual(NSNumber(value: Float(-254.9)).compare(NSNumber(value: UInt8(255))), ComparisonResult.orderedAscending)
+        XCTAssertEqual(NSNumber(value: Float(42)).compare(NSNumber(value: UInt8(42))), .orderedSame)
+        XCTAssertEqual(NSNumber(value: Float(0.1)).compare(NSNumber(value: UInt8(0))), .orderedDescending)
+        XCTAssertEqual(NSNumber(value: Float(-254.9)).compare(NSNumber(value: UInt8(255))), .orderedAscending)
 
-        XCTAssertEqual(NSNumber(value: Float(42)).compare(NSNumber(value: Double(42))), ComparisonResult.orderedSame)
-        XCTAssertEqual(NSNumber(value: Float(0)).compare(NSNumber(value: Double(-37.5))), ComparisonResult.orderedDescending)
-        XCTAssertEqual(NSNumber(value: Float(-37.5)).compare(NSNumber(value: Double(1234.5))), ComparisonResult.orderedAscending)
+        XCTAssertEqual(NSNumber(value: Float(42)).compare(NSNumber(value: Double(42))), .orderedSame)
+        XCTAssertEqual(NSNumber(value: Float(0)).compare(NSNumber(value: Double(-37.5))), .orderedDescending)
+        XCTAssertEqual(NSNumber(value: Float(-37.5)).compare(NSNumber(value: Double(1234.5))), .orderedAscending)
     }
 
     func test_compareNumberWithDouble() {
-        XCTAssertEqual(NSNumber(value: Double(42)).compare(NSNumber(value: Double(42))), ComparisonResult.orderedSame)
-        XCTAssertEqual(NSNumber(value: Double(42)).compare(NSNumber(value: Double(0))), ComparisonResult.orderedDescending)
-        XCTAssertEqual(NSNumber(value: Double(-37)).compare(NSNumber(value: Double(12345))), ComparisonResult.orderedAscending)
+        XCTAssertEqual(NSNumber(value: Double(42)).compare(NSNumber(value: Double(42))), .orderedSame)
+        XCTAssertEqual(NSNumber(value: Double(42)).compare(NSNumber(value: Double(0))), .orderedDescending)
+        XCTAssertEqual(NSNumber(value: Double(-37)).compare(NSNumber(value: Double(12345))), .orderedAscending)
 
-        XCTAssertEqual(NSNumber(value: Double(1)).compare(NSNumber(value: true)), ComparisonResult.orderedSame)
-        XCTAssertEqual(NSNumber(value: Double(0.1)).compare(NSNumber(value: false)), ComparisonResult.orderedDescending)
-        XCTAssertEqual(NSNumber(value: Double(0.9)).compare(NSNumber(value: true)), ComparisonResult.orderedAscending)
+        XCTAssertEqual(NSNumber(value: Double(1)).compare(NSNumber(value: true)), .orderedSame)
+        XCTAssertEqual(NSNumber(value: Double(0.1)).compare(NSNumber(value: false)), .orderedDescending)
+        XCTAssertEqual(NSNumber(value: Double(0.9)).compare(NSNumber(value: true)), .orderedAscending)
 
-        XCTAssertEqual(NSNumber(value: Double(42)).compare(NSNumber(value: UInt8(42))), ComparisonResult.orderedSame)
-        XCTAssertEqual(NSNumber(value: Double(0.1)).compare(NSNumber(value: UInt8(0))), ComparisonResult.orderedDescending)
-        XCTAssertEqual(NSNumber(value: Double(-254.9)).compare(NSNumber(value: UInt8(255))), ComparisonResult.orderedAscending)
+        XCTAssertEqual(NSNumber(value: Double(42)).compare(NSNumber(value: UInt8(42))), .orderedSame)
+        XCTAssertEqual(NSNumber(value: Double(0.1)).compare(NSNumber(value: UInt8(0))), .orderedDescending)
+        XCTAssertEqual(NSNumber(value: Double(-254.9)).compare(NSNumber(value: UInt8(255))), .orderedAscending)
 
-        XCTAssertEqual(NSNumber(value: Double(42)).compare(NSNumber(value: Float(42))), ComparisonResult.orderedSame)
-        XCTAssertEqual(NSNumber(value: Double(0)).compare(NSNumber(value: Float(-37.5))), ComparisonResult.orderedDescending)
-        XCTAssertEqual(NSNumber(value: Double(-37.5)).compare(NSNumber(value: Float(1234.5))), ComparisonResult.orderedAscending)
+        XCTAssertEqual(NSNumber(value: Double(42)).compare(NSNumber(value: Float(42))), .orderedSame)
+        XCTAssertEqual(NSNumber(value: Double(0)).compare(NSNumber(value: Float(-37.5))), .orderedDescending)
+        XCTAssertEqual(NSNumber(value: Double(-37.5)).compare(NSNumber(value: Float(1234.5))), .orderedAscending)
     }
 
     
     func test_description() {
-        let nsnumber: NSNumber = 1000
-        let expectedDesc = "1000"
-        XCTAssertEqual(nsnumber.description, expectedDesc, "expected \(expectedDesc) but received \(nsnumber.description)")
+        XCTAssertEqual(NSNumber(value: 1000).description, "1000")
+        XCTAssertEqual(NSNumber(value: 0.001).description, "0.001")
+
+        XCTAssertEqual(NSNumber(value: Int8.min).description, "-128")
+        XCTAssertEqual(NSNumber(value: Int8.max).description, "127")
+        XCTAssertEqual(NSNumber(value: Int16.min).description, "-32768")
+        XCTAssertEqual(NSNumber(value: Int16.max).description, "32767")
+        XCTAssertEqual(NSNumber(value: Int32.min).description, "-2147483648")
+        XCTAssertEqual(NSNumber(value: Int32.max).description, "2147483647")
+        XCTAssertEqual(NSNumber(value: Int64.min).description, "-9223372036854775808")
+        XCTAssertEqual(NSNumber(value: Int64.max).description, "9223372036854775807")
+
+        XCTAssertEqual(NSNumber(value: UInt8.min).description, "0")
+        XCTAssertEqual(NSNumber(value: UInt8.max).description, "255")
+        XCTAssertEqual(NSNumber(value: UInt16.min).description, "0")
+        XCTAssertEqual(NSNumber(value: UInt16.max).description, "65535")
+        XCTAssertEqual(NSNumber(value: UInt32.min).description, "0")
+        XCTAssertEqual(NSNumber(value: UInt32.max).description, "4294967295")
+        XCTAssertEqual(NSNumber(value: UInt64.min).description, "0")
+        XCTAssertEqual(NSNumber(value: UInt64.max).description, "18446744073709551615")
+
+        XCTAssertEqual(NSNumber(value: 1.2 as Float).description, "1.2")
+        XCTAssertEqual(NSNumber(value: 1000_000_000 as Float).description, "1e+09")
+        XCTAssertEqual(NSNumber(value: -0.99 as Float).description, "-0.99")
+        XCTAssertEqual(NSNumber(value: Float.zero).description, "0.0")
+        XCTAssertEqual(NSNumber(value: Float.nan).description, "nan")
+        XCTAssertEqual(NSNumber(value: Float.leastNormalMagnitude).description, "1.1754944e-38")
+        XCTAssertEqual(NSNumber(value: Float.leastNonzeroMagnitude).description, "1e-45")
+        XCTAssertEqual(NSNumber(value: Float.greatestFiniteMagnitude).description, "3.4028235e+38")
+        XCTAssertEqual(NSNumber(value: Float.pi).description, "3.1415925")
+
+        XCTAssertEqual(NSNumber(value: 1.2 as Double).description, "1.2")
+        XCTAssertEqual(NSNumber(value: 1000_000_000 as Double).description, "1000000000.0")
+        XCTAssertEqual(NSNumber(value: -0.99 as Double).description, "-0.99")
+        XCTAssertEqual(NSNumber(value: Double.zero).description, "0.0")
+        XCTAssertEqual(NSNumber(value: Double.nan).description, "nan")
+        XCTAssertEqual(NSNumber(value: Double.leastNormalMagnitude).description, "2.2250738585072014e-308")
+        XCTAssertEqual(NSNumber(value: Double.leastNonzeroMagnitude).description, "5e-324")
+        XCTAssertEqual(NSNumber(value: Double.greatestFiniteMagnitude).description, "1.7976931348623157e+308")
+        XCTAssertEqual(NSNumber(value: Double.pi).description, "3.141592653589793")
     }
-    
+
     func test_descriptionWithLocale() {
-        let nsnumber: NSNumber = 1000
-        let values : Dictionary = [
-                Locale(identifier: "en_GB") : "1,000",
-                Locale(identifier: "de_DE") : "1.000",
-        ]
-        for (locale, expectedDesc) in values {
-            let receivedDesc = nsnumber.description(withLocale: locale)
-            XCTAssertEqual(receivedDesc, expectedDesc, "expected \(expectedDesc) but received \(receivedDesc)")
-        }
+        // nil Locale
+        XCTAssertEqual(NSNumber(value: 1000).description(withLocale: nil), "1000")
+        XCTAssertEqual(NSNumber(value: 0.001).description(withLocale: nil), "0.001")
+
+        XCTAssertEqual(NSNumber(value: Int8.min).description(withLocale: nil), "-128")
+        XCTAssertEqual(NSNumber(value: Int8.max).description(withLocale: nil), "127")
+        XCTAssertEqual(NSNumber(value: Int16.min).description(withLocale: nil), "-32768")
+        XCTAssertEqual(NSNumber(value: Int16.max).description(withLocale: nil), "32767")
+        XCTAssertEqual(NSNumber(value: Int32.min).description(withLocale: nil), "-2147483648")
+        XCTAssertEqual(NSNumber(value: Int32.max).description(withLocale: nil), "2147483647")
+        XCTAssertEqual(NSNumber(value: Int64.min).description(withLocale: nil), "-9223372036854775808")
+        XCTAssertEqual(NSNumber(value: Int64.max).description(withLocale: nil), "9223372036854775807")
+
+        XCTAssertEqual(NSNumber(value: UInt8.min).description(withLocale: nil), "0")
+        XCTAssertEqual(NSNumber(value: UInt8.max).description(withLocale: nil), "255")
+        XCTAssertEqual(NSNumber(value: UInt16.min).description(withLocale: nil), "0")
+        XCTAssertEqual(NSNumber(value: UInt16.max).description(withLocale: nil), "65535")
+        XCTAssertEqual(NSNumber(value: UInt32.min).description(withLocale: nil), "0")
+        XCTAssertEqual(NSNumber(value: UInt32.max).description(withLocale: nil), "4294967295")
+        XCTAssertEqual(NSNumber(value: UInt64.min).description(withLocale: nil), "0")
+        XCTAssertEqual(NSNumber(value: UInt64.max).description(withLocale: nil), "18446744073709551615")
+
+        XCTAssertEqual(NSNumber(value: 1.2 as Float).description(withLocale: nil), "1.2")
+        XCTAssertEqual(NSNumber(value: 1000_000_000 as Float).description(withLocale: nil), "1e+09")
+        XCTAssertEqual(NSNumber(value: -0.99 as Float).description(withLocale: nil), "-0.99")
+        XCTAssertEqual(NSNumber(value: Float.zero).description(withLocale: nil), "0.0")
+        XCTAssertEqual(NSNumber(value: Float.nan).description(withLocale: nil), "nan")
+        XCTAssertEqual(NSNumber(value: Float.leastNormalMagnitude).description(withLocale: nil), "1.1754944e-38")
+        XCTAssertEqual(NSNumber(value: Float.leastNonzeroMagnitude).description(withLocale: nil), "1e-45")
+        XCTAssertEqual(NSNumber(value: Float.greatestFiniteMagnitude).description(withLocale: nil), "3.4028235e+38")
+        XCTAssertEqual(NSNumber(value: Float.pi).description(withLocale: nil), "3.1415925")
+
+        XCTAssertEqual(NSNumber(value: 1.2 as Double).description(withLocale: nil), "1.2")
+        XCTAssertEqual(NSNumber(value: 1000_000_000 as Double).description(withLocale: nil), "1000000000.0")
+        XCTAssertEqual(NSNumber(value: -0.99 as Double).description(withLocale: nil), "-0.99")
+        XCTAssertEqual(NSNumber(value: Double.zero).description(withLocale: nil), "0.0")
+        XCTAssertEqual(NSNumber(value: Double.nan).description(withLocale: nil), "nan")
+        XCTAssertEqual(NSNumber(value: Double.leastNormalMagnitude).description(withLocale: nil), "2.2250738585072014e-308")
+        XCTAssertEqual(NSNumber(value: Double.leastNonzeroMagnitude).description(withLocale: nil), "5e-324")
+        XCTAssertEqual(NSNumber(value: Double.greatestFiniteMagnitude).description(withLocale: nil), "1.7976931348623157e+308")
+        XCTAssertEqual(NSNumber(value: Double.pi).description(withLocale: nil), "3.141592653589793")
+
+        // en_GB Locale
+        XCTAssertEqual(NSNumber(value: 1000).description(withLocale: Locale(identifier: "en_GB")), "1,000")
+        XCTAssertEqual(NSNumber(value: 0.001).description(withLocale: Locale(identifier: "en_GB")), "0.001")
+
+        XCTAssertEqual(NSNumber(value: Int8.min).description(withLocale: Locale(identifier: "en_GB")), "-128")
+        XCTAssertEqual(NSNumber(value: Int8.max).description(withLocale: Locale(identifier: "en_GB")), "127")
+        XCTAssertEqual(NSNumber(value: Int16.min).description(withLocale: Locale(identifier: "en_GB")), "-32,768")
+        XCTAssertEqual(NSNumber(value: Int16.max).description(withLocale: Locale(identifier: "en_GB")), "32,767")
+        XCTAssertEqual(NSNumber(value: Int32.min).description(withLocale: Locale(identifier: "en_GB")), "-2,147,483,648")
+        XCTAssertEqual(NSNumber(value: Int32.max).description(withLocale: Locale(identifier: "en_GB")), "2,147,483,647")
+        XCTAssertEqual(NSNumber(value: Int64.min).description(withLocale: Locale(identifier: "en_GB")), "-9,223,372,036,854,775,808")
+        XCTAssertEqual(NSNumber(value: Int64.max).description(withLocale: Locale(identifier: "en_GB")), "9,223,372,036,854,775,807")
+
+        XCTAssertEqual(NSNumber(value: UInt8.min).description(withLocale: Locale(identifier: "en_GB")), "0")
+        XCTAssertEqual(NSNumber(value: UInt8.max).description(withLocale: Locale(identifier: "en_GB")), "255")
+        XCTAssertEqual(NSNumber(value: UInt16.min).description(withLocale: Locale(identifier: "en_GB")), "0")
+        XCTAssertEqual(NSNumber(value: UInt16.max).description(withLocale: Locale(identifier: "en_GB")), "65,535")
+        XCTAssertEqual(NSNumber(value: UInt32.min).description(withLocale: Locale(identifier: "en_GB")), "0")
+        XCTAssertEqual(NSNumber(value: UInt32.max).description(withLocale: Locale(identifier: "en_GB")), "4,294,967,295")
+        XCTAssertEqual(NSNumber(value: UInt64.min).description(withLocale: Locale(identifier: "en_GB")), "0")
+
+        // This is the correct value but currently buggy and the locale is not used
+        // XCTAssertEqual(NSNumber(value: UInt64.max).description(withLocale: Locale(identifier: "en_GB")), "18,446,744,073,709,551,615")
+        XCTAssertEqual(NSNumber(value: UInt64.max).description(withLocale: Locale(identifier: "en_GB")), "18446744073709551615")
+
+        XCTAssertEqual(NSNumber(value: 1.2 as Float).description(withLocale: Locale(identifier: "en_GB")), "1.2")
+        XCTAssertEqual(NSNumber(value: 1000_000_000 as Float).description(withLocale: Locale(identifier: "en_GB")), "1E+09")
+        XCTAssertEqual(NSNumber(value: -0.99 as Float).description(withLocale: Locale(identifier: "en_GB")), "-0.99")
+        XCTAssertEqual(NSNumber(value: Float.zero).description(withLocale: Locale(identifier: "en_GB")), "0")
+        XCTAssertEqual(NSNumber(value: Float.nan).description(withLocale: Locale(identifier: "en_GB")), "NaN")
+        XCTAssertEqual(NSNumber(value: Float.leastNormalMagnitude).description(withLocale: Locale(identifier: "en_GB")), "1.175494E-38")
+        XCTAssertEqual(NSNumber(value: Float.leastNonzeroMagnitude).description(withLocale: Locale(identifier: "en_GB")), "1.401298E-45")
+        XCTAssertEqual(NSNumber(value: Float.greatestFiniteMagnitude).description(withLocale: Locale(identifier: "en_GB")), "3.402823E+38")
+        XCTAssertEqual(NSNumber(value: Float.pi).description(withLocale: Locale(identifier: "en_GB")), "3.141593")
+
+        XCTAssertEqual(NSNumber(value: 1.2 as Double).description(withLocale: Locale(identifier: "en_GB")), "1.2")
+        XCTAssertEqual(NSNumber(value: 1000_000_000 as Double).description(withLocale: Locale(identifier: "en_GB")), "1,000,000,000")
+        XCTAssertEqual(NSNumber(value: -0.99 as Double).description(withLocale: Locale(identifier: "en_GB")), "-0.99")
+        XCTAssertEqual(NSNumber(value: Double.zero).description(withLocale: Locale(identifier: "en_GB")), "0")
+        XCTAssertEqual(NSNumber(value: Double.nan).description(withLocale: Locale(identifier: "en_GB")), "NaN")
+        XCTAssertEqual(NSNumber(value: Double.leastNormalMagnitude).description(withLocale: Locale(identifier: "en_GB")), "2.225073858507201E-308")
+        XCTAssertEqual(NSNumber(value: Double.leastNonzeroMagnitude).description(withLocale: Locale(identifier: "en_GB")), "5E-324")
+        XCTAssertEqual(NSNumber(value: Double.greatestFiniteMagnitude).description(withLocale: Locale(identifier: "en_GB")), "1.797693134862316E+308")
+
+        // de_DE Locale
+        XCTAssertEqual(NSNumber(value: 1000).description(withLocale: Locale(identifier: "de_DE")), "1.000")
+        XCTAssertEqual(NSNumber(value: 0.001).description(withLocale: Locale(identifier: "de_DE")), "0,001")
+
+        XCTAssertEqual(NSNumber(value: Int8.min).description(withLocale: Locale(identifier: "de_DE")), "-128")
+        XCTAssertEqual(NSNumber(value: Int8.max).description(withLocale: Locale(identifier: "de_DE")), "127")
+        XCTAssertEqual(NSNumber(value: Int16.min).description(withLocale: Locale(identifier: "de_DE")), "-32.768")
+        XCTAssertEqual(NSNumber(value: Int16.max).description(withLocale: Locale(identifier: "de_DE")), "32.767")
+        XCTAssertEqual(NSNumber(value: Int32.min).description(withLocale: Locale(identifier: "de_DE")), "-2.147.483.648")
+        XCTAssertEqual(NSNumber(value: Int32.max).description(withLocale: Locale(identifier: "de_DE")), "2.147.483.647")
+        XCTAssertEqual(NSNumber(value: Int64.min).description(withLocale: Locale(identifier: "de_DE")), "-9.223.372.036.854.775.808")
+        XCTAssertEqual(NSNumber(value: Int64.max).description(withLocale: Locale(identifier: "de_DE")), "9.223.372.036.854.775.807")
+
+        XCTAssertEqual(NSNumber(value: UInt8.min).description(withLocale: Locale(identifier: "de_DE")), "0")
+        XCTAssertEqual(NSNumber(value: UInt8.max).description(withLocale: Locale(identifier: "de_DE")), "255")
+        XCTAssertEqual(NSNumber(value: UInt16.min).description(withLocale: Locale(identifier: "de_DE")), "0")
+        XCTAssertEqual(NSNumber(value: UInt16.max).description(withLocale: Locale(identifier: "de_DE")), "65.535")
+        XCTAssertEqual(NSNumber(value: UInt32.min).description(withLocale: Locale(identifier: "de_DE")), "0")
+        XCTAssertEqual(NSNumber(value: UInt32.max).description(withLocale: Locale(identifier: "de_DE")), "4.294.967.295")
+        XCTAssertEqual(NSNumber(value: UInt64.min).description(withLocale: Locale(identifier: "de_DE")), "0")
+
+        // This is the correct value but currently buggy and the locale is not used
+        //XCTAssertEqual(NSNumber(value: UInt64.max).description(withLocale: Locale(identifier: "de_DE")), "18.446.744.073.709.551.615")
+        XCTAssertEqual(NSNumber(value: UInt64.max).description(withLocale: Locale(identifier: "de_DE")), "18446744073709551615")
+
+        XCTAssertEqual(NSNumber(value: 1.2 as Float).description(withLocale: Locale(identifier: "de_DE")), "1,2")
+        XCTAssertEqual(NSNumber(value: 1000_000_000 as Float).description(withLocale: Locale(identifier: "de_DE")), "1E+09")
+        XCTAssertEqual(NSNumber(value: -0.99 as Float).description(withLocale: Locale(identifier: "de_DE")), "-0,99")
+        XCTAssertEqual(NSNumber(value: Float.pi).description(withLocale: Locale(identifier: "de_DE")), "3,141593")
+        XCTAssertEqual(NSNumber(value: Float.zero).description(withLocale: Locale(identifier: "de_DE")), "0")
+        XCTAssertEqual(NSNumber(value: Float.nan).description(withLocale: Locale(identifier: "de_DE")), "NaN")
+        XCTAssertEqual(NSNumber(value: Float.leastNormalMagnitude).description(withLocale: Locale(identifier: "de_DE")), "1,175494E-38")
+        XCTAssertEqual(NSNumber(value: Float.leastNonzeroMagnitude).description(withLocale: Locale(identifier: "de_DE")), "1,401298E-45")
+        XCTAssertEqual(NSNumber(value: Float.greatestFiniteMagnitude).description(withLocale: Locale(identifier: "de_DE")), "3,402823E+38")
+
+        XCTAssertEqual(NSNumber(value: 1.2 as Double).description(withLocale: Locale(identifier: "de_DE")), "1,2")
+        XCTAssertEqual(NSNumber(value: 1000_000_000 as Double).description(withLocale: Locale(identifier: "de_DE")), "1.000.000.000")
+        XCTAssertEqual(NSNumber(value: -0.99 as Double).description(withLocale: Locale(identifier: "de_DE")), "-0,99")
+        XCTAssertEqual(NSNumber(value: Double.zero).description(withLocale: Locale(identifier: "de_DE")), "0")
+        XCTAssertEqual(NSNumber(value: Double.nan).description(withLocale: Locale(identifier: "de_DE")), "NaN")
+        XCTAssertEqual(NSNumber(value: Double.leastNormalMagnitude).description(withLocale: Locale(identifier: "de_DE")), "2,225073858507201E-308")
+        XCTAssertEqual(NSNumber(value: Double.leastNonzeroMagnitude).description(withLocale: Locale(identifier: "de_DE")), "5E-324")
+        XCTAssertEqual(NSNumber(value: Double.greatestFiniteMagnitude).description(withLocale: Locale(identifier: "de_DE")), "1,797693134862316E+308")
     }
 
     func test_objCType() {
@@ -1083,37 +1232,40 @@ class TestNSNumber : XCTestCase {
 
     func test_stringValue() {
 
+        // The following casts on subtraction are required for an Android compile
+        // https://bugs.swift.org/browse/SR-7469
+
         if UInt.max == UInt32.max {
             XCTAssertEqual(NSNumber(value: UInt.min).stringValue, "0")
             XCTAssertEqual(NSNumber(value: UInt.min + 1).stringValue, "1")
             XCTAssertEqual(NSNumber(value: UInt.max).stringValue, "4294967295")
-            XCTAssertEqual(NSNumber(value: UInt.max - 1).stringValue, "4294967294")
+            XCTAssertEqual(NSNumber(value: UInt.max - 1 as UInt).stringValue, "4294967294")
         } else if UInt.max == UInt64.max {
             XCTAssertEqual(NSNumber(value: UInt.min).stringValue, "0")
             XCTAssertEqual(NSNumber(value: UInt.min + 1).stringValue, "1")
             XCTAssertEqual(NSNumber(value: UInt.max).stringValue, "18446744073709551615")
-            XCTAssertEqual(NSNumber(value: UInt.max - 1).stringValue, "18446744073709551614")
+            XCTAssertEqual(NSNumber(value: UInt.max - 1 as UInt).stringValue, "18446744073709551614")
         }
 
         XCTAssertEqual(NSNumber(value: UInt8.min).stringValue, "0")
         XCTAssertEqual(NSNumber(value: UInt8.min + 1).stringValue, "1")
         XCTAssertEqual(NSNumber(value: UInt8.max).stringValue, "255")
-        XCTAssertEqual(NSNumber(value: UInt8.max - 1).stringValue, "254")
+        XCTAssertEqual(NSNumber(value: UInt8.max - 1 as UInt8).stringValue, "254")
 
         XCTAssertEqual(NSNumber(value: UInt16.min).stringValue, "0")
         XCTAssertEqual(NSNumber(value: UInt16.min + 1).stringValue, "1")
         XCTAssertEqual(NSNumber(value: UInt16.max).stringValue, "65535")
-        XCTAssertEqual(NSNumber(value: UInt16.max - 1).stringValue, "65534")
+        XCTAssertEqual(NSNumber(value: UInt16.max - 1 as UInt16).stringValue, "65534")
 
         XCTAssertEqual(NSNumber(value: UInt32.min).stringValue, "0")
         XCTAssertEqual(NSNumber(value: UInt32.min + 1).stringValue, "1")
         XCTAssertEqual(NSNumber(value: UInt32.max).stringValue, "4294967295")
-        XCTAssertEqual(NSNumber(value: UInt32.max - 1).stringValue, "4294967294")
+        XCTAssertEqual(NSNumber(value: UInt32.max - 1 as UInt32).stringValue, "4294967294")
 
         XCTAssertEqual(NSNumber(value: UInt64.min).stringValue, "0")
         XCTAssertEqual(NSNumber(value: UInt64.min + 1).stringValue, "1")
         XCTAssertEqual(NSNumber(value: UInt64.max).stringValue, "18446744073709551615")
-        XCTAssertEqual(NSNumber(value: UInt64.max - 1).stringValue, "18446744073709551614")
+        XCTAssertEqual(NSNumber(value: UInt64.max - 1 as UInt64).stringValue, "18446744073709551614")
 
         if Int.max == Int32.max {
             XCTAssertEqual(NSNumber(value: Int.min).stringValue, "-2147483648")
@@ -1200,25 +1352,94 @@ class TestNSNumber : XCTestCase {
         XCTAssertFalse(num == NSNumber(value: num.uint64Value))
 
         let num1 = NSNumber(value: Float.nan)
-        XCTAssertEqual(num1.compare(num1), ComparisonResult.orderedSame)
+        XCTAssertEqual(num1.compare(num1), .orderedSame)
 
         let num2 = NSNumber(value: num1.uint8Value) // 0
         XCTAssertFalse(num1 == num2)
         XCTAssertFalse(num2 == num1)
-        XCTAssertEqual(num1.compare(num2), ComparisonResult.orderedAscending)
-        XCTAssertEqual(num2.compare(num1), ComparisonResult.orderedDescending)
+        XCTAssertEqual(num1.compare(num2), .orderedAscending)
+        XCTAssertEqual(num2.compare(num1), .orderedDescending)
 
         let num3 = NSNumber(value: Double.nan)
-        XCTAssertEqual(num3.compare(num3), ComparisonResult.orderedSame)
+        XCTAssertEqual(num3.compare(num3), .orderedSame)
 
         let num4 = NSNumber(value: num3.intValue) // 0
         XCTAssertFalse(num3 == num2)
         XCTAssertFalse(num4 == num3)
-        XCTAssertEqual(num3.compare(num4), ComparisonResult.orderedAscending)
-        XCTAssertEqual(num4.compare(num3), ComparisonResult.orderedDescending)
+        XCTAssertEqual(num3.compare(num4), .orderedAscending)
+        XCTAssertEqual(num4.compare(num3), .orderedDescending)
 
-        XCTAssertEqual(NSNumber(value: Double.leastNonzeroMagnitude).compare(NSNumber(value: 0)), ComparisonResult.orderedDescending)
-        XCTAssertEqual(NSNumber(value: Double.greatestFiniteMagnitude).compare(NSNumber(value: 0)), ComparisonResult.orderedDescending)
+        XCTAssertEqual(NSNumber(value: Double.leastNonzeroMagnitude).compare(NSNumber(value: 0)), .orderedDescending)
+        XCTAssertEqual(NSNumber(value: Double.greatestFiniteMagnitude).compare(NSNumber(value: 0)), .orderedDescending)
         XCTAssertTrue(NSNumber(value: Double(-0.0)) == NSNumber(value: Double(0.0)))
+    }
+
+    func test_boolValue() {
+        XCTAssertEqual(NSNumber(value: UInt8.max).boolValue, true)
+        XCTAssertEqual(NSNumber(value: UInt8.min).boolValue, false)
+
+        XCTAssertEqual(NSNumber(value: UInt16.max).boolValue, true)
+        XCTAssertEqual(NSNumber(value: UInt16.min).boolValue, false)
+
+        XCTAssertEqual(NSNumber(value: UInt32.max).boolValue, true)
+        XCTAssertEqual(NSNumber(value: UInt32.min).boolValue, false)
+
+        XCTAssertEqual(NSNumber(value: UInt64.max).boolValue, true)
+        XCTAssertEqual(NSNumber(value: UInt64.min).boolValue, false)
+
+        XCTAssertEqual(NSNumber(value: UInt.max).boolValue, true)
+        XCTAssertEqual(NSNumber(value: UInt.min).boolValue, false)
+
+        XCTAssertEqual(NSNumber(value: Int8.max).boolValue, true)
+        XCTAssertEqual(NSNumber(value: Int8.max - 1).boolValue, true)
+        XCTAssertEqual(NSNumber(value: Int8.min).boolValue, true)
+        XCTAssertEqual(NSNumber(value: Int8.min + 1).boolValue, true)
+        XCTAssertEqual(NSNumber(value: Int8(-1)).boolValue, true)
+
+        XCTAssertEqual(NSNumber(value: Int16.max).boolValue, true)
+        XCTAssertEqual(NSNumber(value: Int16.max - 1).boolValue, true)
+        XCTAssertEqual(NSNumber(value: Int16.min).boolValue, true)
+        XCTAssertEqual(NSNumber(value: Int16.min + 1).boolValue, true)
+        XCTAssertEqual(NSNumber(value: Int16(-1)).boolValue, true)
+
+        XCTAssertEqual(NSNumber(value: Int32.max).boolValue, true)
+        XCTAssertEqual(NSNumber(value: Int32.max - 1).boolValue, true)
+        XCTAssertEqual(NSNumber(value: Int32.min).boolValue, true)
+        XCTAssertEqual(NSNumber(value: Int32.min + 1).boolValue, true)
+        XCTAssertEqual(NSNumber(value: Int32(-1)).boolValue, true)
+
+        XCTAssertEqual(NSNumber(value: Int64.max).boolValue, true)
+        XCTAssertEqual(NSNumber(value: Int64.max - 1).boolValue, true)
+        XCTAssertEqual(NSNumber(value: Int64.min).boolValue, false) // Darwin compatibility
+        XCTAssertEqual(NSNumber(value: Int64.min + 1).boolValue, true)
+        XCTAssertEqual(NSNumber(value: Int64(-1)).boolValue, true)
+
+        XCTAssertEqual(NSNumber(value: Int.max).boolValue, true)
+        XCTAssertEqual(NSNumber(value: Int.max - 1).boolValue, true)
+        XCTAssertEqual(NSNumber(value: Int.min).boolValue, false)   // Darwin compatibility
+        XCTAssertEqual(NSNumber(value: Int.min + 1).boolValue, true)
+        XCTAssertEqual(NSNumber(value: Int(-1)).boolValue, true)
+    }
+
+    func test_hash() {
+        // A zero double hashes as zero.
+        XCTAssertEqual(NSNumber(value: 0 as Double).hash, 0)
+
+        // A positive double without fractional part should hash the same as the
+        // equivalent 64 bit number.
+        XCTAssertEqual(NSNumber(value: 123456 as Double).hash, NSNumber(value: 123456 as Int64).hash)
+
+        // A negative double without fractional part should hash the same as the
+        // equivalent 64 bit number.
+        XCTAssertEqual(NSNumber(value: -123456 as Double).hash, NSNumber(value: -123456 as Int64).hash)
+
+        #if arch(i386) || arch(arm)
+            // This test used to fail in 32 bit platforms.
+            XCTAssertNotEqual(NSNumber(value: 551048378.24883795 as Double).hash, 0)
+
+            // Some hashes are correctly zero, though. Like the following which
+            // was found by trial and error.
+            XCTAssertEqual(NSNumber(value: 1.3819660135 as Double).hash, 0)
+        #endif
     }
 }

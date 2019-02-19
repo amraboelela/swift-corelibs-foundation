@@ -7,15 +7,6 @@
 // See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 
-#if DEPLOYMENT_RUNTIME_OBJC || os(Linux)
-    import Foundation
-    import XCTest
-#else
-    import SwiftFoundation
-    import SwiftXCTest
-#endif
-
-
 class TestRunLoop : XCTestCase {
     static var allTests : [(String, (TestRunLoop) -> () throws -> Void)] {
         return [
@@ -29,18 +20,16 @@ class TestRunLoop : XCTestCase {
     }
     
     func test_constants() {
-        XCTAssertEqual(RunLoopMode.commonModes.rawValue, "kCFRunLoopCommonModes",
-                       "\(RunLoopMode.commonModes.rawValue) is not equal to kCFRunLoopCommonModes")
+        XCTAssertEqual(RunLoop.Mode.common.rawValue, "kCFRunLoopCommonModes",
+                       "\(RunLoop.Mode.common.rawValue) is not equal to kCFRunLoopCommonModes")
         
-        XCTAssertEqual(RunLoopMode.defaultRunLoopMode.rawValue, "kCFRunLoopDefaultMode",
-                       "\(RunLoopMode.defaultRunLoopMode.rawValue) is not equal to kCFRunLoopDefaultMode")
+        XCTAssertEqual(RunLoop.Mode.default.rawValue, "kCFRunLoopDefaultMode",
+                       "\(RunLoop.Mode.default.rawValue) is not equal to kCFRunLoopDefaultMode")
     }
     
     func test_runLoopInit() {
         let mainRunLoop = RunLoop.main
-        XCTAssertNotNil(mainRunLoop)
         let currentRunLoop = RunLoop.current
-        XCTAssertNotNil(currentRunLoop)
 
         let secondAccessOfMainLoop = RunLoop.main
         XCTAssertEqual(mainRunLoop, secondAccessOfMainLoop, "fetching the main loop a second time should be equal")
@@ -68,10 +57,10 @@ class TestRunLoop : XCTestCase {
                 return
             }
             
-            XCTAssertEqual(runLoopMode, RunLoopMode.defaultRunLoopMode)
+            XCTAssertEqual(runLoopMode, RunLoop.Mode.default)
         }
-        runLoop.add(dummyTimer, forMode: .defaultRunLoopMode)
-        let result = runLoop.run(mode: .defaultRunLoopMode, before: endDate)
+        runLoop.add(dummyTimer, forMode: .default)
+        let result = runLoop.run(mode: .default, before: endDate)
         
         XCTAssertFalse(result) // should be .Finished
         XCTAssertTrue(flag)
@@ -83,9 +72,9 @@ class TestRunLoop : XCTestCase {
         let expectedTimeInterval = Date(timeInterval: timeInterval, since: Date()).timeIntervalSince1970
 
         let dummyTimer = Timer.scheduledTimer(withTimeInterval: timeInterval, repeats: false) { _ in }
-        runLoop.add(dummyTimer, forMode: .defaultRunLoopMode)
+        runLoop.add(dummyTimer, forMode: .default)
         
-        guard let timerTickInterval = runLoop.limitDate(forMode: .defaultRunLoopMode)?.timeIntervalSince1970 else {
+        guard let timerTickInterval = runLoop.limitDate(forMode: .default)?.timeIntervalSince1970 else {
             return
         }
         
@@ -99,7 +88,7 @@ class TestRunLoop : XCTestCase {
             done.fulfill()
         }
         
-        runLoop.add(timer, forMode: .commonModes)
+        runLoop.add(timer, forMode: .common)
         
         waitForExpectations(timeout: 10)
     }

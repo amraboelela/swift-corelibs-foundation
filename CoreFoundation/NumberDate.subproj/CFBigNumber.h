@@ -1,7 +1,7 @@
 /*	CFBigNumber.h
-	Copyright (c) 2012-2017, Apple Inc. and the Swift project authors
+	Copyright (c) 2012-2018, Apple Inc. and the Swift project authors
  
-	Portions Copyright (c) 2014-2017, Apple Inc. and the Swift project authors
+	Portions Copyright (c) 2014-2018, Apple Inc. and the Swift project authors
 	Licensed under Apache License v2.0 with Runtime Library Exception
 	See http://swift.org/LICENSE.txt for license information
 	See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
@@ -25,7 +25,7 @@ void _CFBigNumInitWithInt8(_CFBigNum *r, int8_t inNum);
 void _CFBigNumInitWithInt16(_CFBigNum *r, int16_t inNum);
 void _CFBigNumInitWithInt32(_CFBigNum *r, int32_t inNum);
 void _CFBigNumInitWithInt64(_CFBigNum *r, int64_t inNum);
-#ifdef __LP64__
+#if TARGET_RT_64_BIT
 void _CFBigNumInitWithInt128(_CFBigNum *r, __int128_t inNum);
 #endif
 
@@ -33,7 +33,7 @@ void _CFBigNumInitWithUInt8(_CFBigNum *r, uint8_t inNum);
 void _CFBigNumInitWithUInt16(_CFBigNum *r, uint16_t inNum);
 void _CFBigNumInitWithUInt32(_CFBigNum *r, uint32_t inNum);
 void _CFBigNumInitWithUInt64(_CFBigNum *r, uint64_t inNum);
-#ifdef __LP64__
+#if TARGET_RT_64_BIT
 void _CFBigNumInitWithUInt128(_CFBigNum *r, __uint128_t inNum);
 #endif
 
@@ -41,7 +41,7 @@ int8_t  _CFBigNumGetInt8(const _CFBigNum *num);
 int16_t _CFBigNumGetInt16(const _CFBigNum *num);
 int32_t _CFBigNumGetInt32(const _CFBigNum *num);
 int64_t _CFBigNumGetInt64(const _CFBigNum *num);
-#ifdef __LP64__
+#if TARGET_RT_64_BIT
 __int128_t _CFBigNumGetInt128(const _CFBigNum *num);
 #endif
 
@@ -49,7 +49,7 @@ uint8_t  _CFBigNumGetUInt8(const _CFBigNum *num);
 uint16_t _CFBigNumGetUInt16(const _CFBigNum *num);
 uint32_t _CFBigNumGetUInt32(const _CFBigNum *num);
 uint64_t _CFBigNumGetUInt64(const _CFBigNum *num);
-#ifdef __LP64__
+#if TARGET_RT_64_BIT
 __uint128_t _CFBigNumGetUInt128(const _CFBigNum *num);
 #endif
 

@@ -7,18 +7,6 @@
 // See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 
-
-
-#if DEPLOYMENT_RUNTIME_OBJC || os(Linux)
-    import Foundation
-    import XCTest
-#else
-    import SwiftFoundation
-    import SwiftXCTest
-#endif
-
-
-
 class TestNSOrderedSet : XCTestCase {
 
     static var allTests: [(String, (TestNSOrderedSet) -> () throws -> Void)] {
@@ -31,7 +19,6 @@ class TestNSOrderedSet : XCTestCase {
             ("test_reversedEmpty", test_reversedEmpty),
             ("test_ObjectAtIndex", test_ObjectAtIndex),
             ("test_ObjectsAtIndexes", test_ObjectsAtIndexes),
-//            ("test_GetObjects", test_GetObjects),
             ("test_FirstAndLastObjects", test_FirstAndLastObjects),
             ("test_AddObject", test_AddObject),
             ("test_AddObjects", test_AddObjects),
@@ -72,6 +59,126 @@ class TestNSOrderedSet : XCTestCase {
         for item in set {
             XCTAssertEqual(arr[index], item as? String)
             index += 1
+        }
+    }
+    
+    func test_enumerationUsingBlock() {
+        let array = NSOrderedSet(array: Array(0..<100))
+        let createIndexesArrayHavingSeen = { (havingSeen: IndexSet) in
+            return (0 ..< array.count).map { havingSeen.contains($0) }
+        }
+        
+        let noIndexes = IndexSet()
+        let allIndexes = IndexSet(integersIn: 0 ..< array.count)
+        let firstHalfOfIndexes = IndexSet(integersIn: 0 ..< array.count / 2)
+        let lastHalfOfIndexes = IndexSet(integersIn: array.count / 2 ..< array.count)
+        let evenIndexes : IndexSet = {
+            var indexes = IndexSet()
+            for index in allIndexes.filter({ $0 % 2 == 0 }) {
+                indexes.insert(index)
+            }
+            return indexes
+        }()
+        
+        let testExpectingToSee = { (expectation: IndexSet, block: (inout UnsafeMutableBufferPointer<Bool>) -> Void) in
+            var indexesSeen = createIndexesArrayHavingSeen(noIndexes)
+            indexesSeen.withUnsafeMutableBufferPointer(block)
+            XCTAssertEqual(indexesSeen, createIndexesArrayHavingSeen(expectation))
+        }
+        
+        // Test enumerateObjects(_:), allowing it to run to completion...
+        
+        testExpectingToSee(allIndexes) { (indexesSeen) in
+            array.enumerateObjects { (value, index, stop) in
+                XCTAssertEqual(value as! NSNumber, array[index] as! NSNumber)
+                indexesSeen[index] = true
+            }
+        }
+        
+        // ... and stopping after the first half:
+        
+        testExpectingToSee(firstHalfOfIndexes) { (indexesSeen) in
+            array.enumerateObjects { (value, index, stop) in
+                XCTAssertEqual(value as! NSNumber, array[index] as! NSNumber)
+                
+                if firstHalfOfIndexes.contains(index) {
+                    indexesSeen[index] = true
+                } else {
+                    stop.pointee = true
+                }
+            }
+        }
+        
+        // -----
+        // Test enumerateObjects(options:using) and enumerateObjects(at:options:using:):
+        
+        // Test each of these options combinations:
+        let optionsToTest: [NSEnumerationOptions] = [
+            [],
+            [.concurrent],
+            [.reverse],
+            [.concurrent, .reverse],
+            ]
+        
+        for options in optionsToTest {
+            // Run to completion,
+            testExpectingToSee(allIndexes) { (indexesSeen) in
+                array.enumerateObjects(options: options, using: { (value, index, stop) in
+                    XCTAssertEqual(value as! NSNumber, array[index] as! NSNumber)
+                    indexesSeen[index] = true
+                })
+            }
+            
+            // run it only for half the indexes (use the right half depending on where we start),
+            let indexesForHalfEnumeration = options.contains(.reverse) ? lastHalfOfIndexes : firstHalfOfIndexes
+            
+            testExpectingToSee(indexesForHalfEnumeration) { (indexesSeen) in
+                array.enumerateObjects(options: options, using: { (value, index, stop) in
+                    XCTAssertEqual(value as! NSNumber, array[index] as! NSNumber)
+                    
+                    if indexesForHalfEnumeration.contains(index) {
+                        indexesSeen[index] = true
+                    } else {
+                        stop.pointee = true
+                    }
+                })
+            }
+            
+            // run only for a specific index set to test the at:… variant,
+            testExpectingToSee(evenIndexes) { (indexesSeen) in
+                array.enumerateObjects(at: evenIndexes, options: options, using: { (value, index, stop) in
+                    XCTAssertEqual(value as! NSNumber, array[index] as! NSNumber)
+                    indexesSeen[index] = true
+                })
+            }
+            
+            // and run for some indexes only to test stopping.
+            var indexesForStaggeredEnumeration = indexesForHalfEnumeration
+            indexesForStaggeredEnumeration.formIntersection(evenIndexes)
+            
+            let finalCount = indexesForStaggeredEnumeration.count
+            
+            let lockForSeenCount = NSLock()
+            var seenCount = 0
+            
+            testExpectingToSee(indexesForStaggeredEnumeration) { (indexesSeen) in
+                array.enumerateObjects(at: evenIndexes, options: options, using: { (value, index, stop) in
+                    XCTAssertEqual(value as! NSNumber, array[index] as! NSNumber)
+                    
+                    if (indexesForStaggeredEnumeration.contains(index)) {
+                        indexesSeen[index] = true
+                        
+                        lockForSeenCount.lock()
+                        seenCount += 1
+                        let currentCount = seenCount
+                        lockForSeenCount.unlock()
+                        
+                        if currentCount == finalCount {
+                            stop.pointee = true
+                        }
+                    }
+                })
+            }
         }
     }
 
@@ -121,23 +228,12 @@ class TestNSOrderedSet : XCTestCase {
 
     func test_ObjectsAtIndexes() {
         let set = NSOrderedSet(array: ["foo", "bar", "baz", "1", "2", "3"])
-        var indexSet = IndexSet()
-        indexSet.insert(1)
-        indexSet.insert(3)
-        indexSet.insert(5)
-        let objects = set.objects(at: indexSet)
+        let objects = set.objects(at: [1, 3, 5])
+        XCTAssertEqual(objects.count, 3)
         XCTAssertEqual(objects[0] as? String, "bar")
         XCTAssertEqual(objects[1] as? String, "1")
         XCTAssertEqual(objects[2] as? String, "3")
     }
-
-//    func test_GetObjects() {
-//        let set = NSOrderedSet(array: ["foo", "bar", "baz"])
-//        var objects = [Any]()
-//        set.getObjects(&objects, range: NSRange(location: 1, length: 2))
-//        XCTAssertEqual(objects[0] as? NSString, "bar")
-//        XCTAssertEqual(objects[1] as? NSString, "baz")
-//    }
 
     func test_FirstAndLastObjects() {
         let set = NSOrderedSet(array: ["foo", "bar", "baz"])
@@ -359,7 +455,7 @@ class TestNSOrderedSet : XCTestCase {
             if let lhs = lhs as? String, let rhs = rhs as? String {
                 return lhs.compare(rhs)
             }
-            return ComparisonResult.orderedSame
+            return .orderedSame
         }
         XCTAssertEqual(set[0] as? String, "a")
         XCTAssertEqual(set[1] as? String, "b")
@@ -370,7 +466,7 @@ class TestNSOrderedSet : XCTestCase {
             if let lhs = lhs as? String, let rhs = rhs as? String {
                 return rhs.compare(lhs)
             }
-            return ComparisonResult.orderedSame
+            return .orderedSame
         }
         XCTAssertEqual(set[0] as? String, "a")
         XCTAssertEqual(set[1] as? String, "c")

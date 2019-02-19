@@ -1,7 +1,7 @@
 /*	CFPriv.h
-	Copyright (c) 1998-2017, Apple Inc. and the Swift project authors
+	Copyright (c) 1998-2018, Apple Inc. and the Swift project authors
  
-	Portions Copyright (c) 2014-2017, Apple Inc. and the Swift project authors
+	Portions Copyright (c) 2014-2018, Apple Inc. and the Swift project authors
 	Licensed under Apache License v2.0 with Runtime Library Exception
 	See http://swift.org/LICENSE.txt for license information
 	See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
@@ -26,13 +26,20 @@
 #include <CoreFoundation/CFSet.h>
 #include <math.h>
 
-#ifndef CF_CROSS_PLATFORM_EXPORT
-    #if !DEPLOYMENT_RUNTIME_OBJC
-        #define CF_CROSS_PLATFORM_EXPORT extern
-    #else
-        #define CF_CROSS_PLATFORM_EXPORT static __attribute__((used))
-    #endif
+#define CF_CROSS_PLATFORM_EXPORT extern
+
+#if TARGET_OS_WIN32
+  // No C99 support
+  #define _CF_RESTRICT
+#else
+  #if defined(__cplusplus)
+    #define _CF_RESTRICT __restrict__
+  #else
+    #define _CF_RESTRICT restrict
+  #endif
 #endif
+
+
 
 #if (TARGET_OS_MAC && !(TARGET_OS_EMBEDDED || TARGET_OS_IPHONE || TARGET_OS_LINUX)) || (TARGET_OS_EMBEDDED || TARGET_OS_IPHONE)
 #include <CoreFoundation/CFMachPort.h>
@@ -42,21 +49,20 @@
 #include <CoreFoundation/CFRunLoop.h>
 #include <CoreFoundation/CFSocket.h>
 #include <CoreFoundation/CFBundlePriv.h>
-#include <CoreFoundation/CFKnownLocations.h>
 
 CF_EXTERN_C_BEGIN
-
-CF_EXPORT intptr_t _CFDoOperation(intptr_t code, intptr_t subcode1, intptr_t subcode2);
 
 CF_EXPORT void _CFRuntimeSetCFMPresent(void *a);
 
 CF_EXPORT const char *_CFProcessPath(void);
 CF_EXPORT const char **_CFGetProcessPath(void);
 CF_EXPORT const char **_CFGetProgname(void);
+
+#if !TARGET_OS_WIN32
 CF_EXPORT void _CFGetUGIDs(uid_t *euid, gid_t *egid);
 CF_EXPORT uid_t _CFGetEUID(void);
 CF_EXPORT uid_t _CFGetEGID(void);
-
+#endif
 
 #if (TARGET_OS_MAC && !(TARGET_OS_EMBEDDED || TARGET_OS_IPHONE || TARGET_OS_LINUX))
 CF_EXPORT void _CFRunLoopSetCurrent(CFRunLoopRef rl);
@@ -80,12 +86,14 @@ CF_EXPORT void CFPreferencesFlushCaches(void);
 
 
 
+
+
 #if TARGET_OS_WIN32
 CF_EXPORT Boolean _CFURLGetWideFileSystemRepresentation(CFURLRef url, Boolean resolveAgainstBase, wchar_t *buffer, CFIndex bufferLength);
 #endif
 
-#if !__LP64__
-#if (TARGET_OS_MAC && !(TARGET_OS_EMBEDDED || TARGET_OS_IPHONE)) || (TARGET_OS_EMBEDDED || TARGET_OS_IPHONE)
+#if !TARGET_RT_64_BIT
+#if TARGET_OS_OSX
 struct FSSpec;
 CF_EXPORT
 Boolean _CFGetFSSpecFromURL(CFAllocatorRef alloc, CFURLRef url, struct FSSpec *spec);
@@ -160,9 +168,6 @@ CF_EXPORT
 CFStringRef CFCopyUserName(void);
 
 CF_EXPORT
-CFStringRef CFCopyFullUserName(void);
-
-CF_EXPORT
 CFURLRef CFCopyHomeDirectoryURLForUser(CFStringRef uName);	/* Pass NULL for the current user's home directory */
 
 
@@ -217,8 +222,10 @@ typedef CF_OPTIONS(CFOptionFlags, CFSearchPathDomainMask) {
     kCFAllDomainsMask = 0x0ffff	/* all domains: all of the above and more, future items */
 };
 
+#if TARGET_OS_MAC || TARGET_OS_EMBEDDED
 CF_EXPORT
 CFArrayRef CFCopySearchPathForDirectoriesInDomains(CFSearchPathDirectory directory, CFSearchPathDomainMask domainMask, Boolean expandTilde);
+#endif
 
 
 /* Obsolete keys */
@@ -248,11 +255,8 @@ CF_EXPORT const CFStringRef _kCFSystemVersionBuildStringKey;		// Localized strin
 CF_EXPORT void CFMergeSortArray(void *list, CFIndex count, CFIndex elementSize, CFComparatorFunction comparator, void *context);
 CF_EXPORT void CFQSortArray(void *list, CFIndex count, CFIndex elementSize, CFComparatorFunction comparator, void *context);
 
-/* _CFExecutableLinkedOnOrAfter(releaseVersionName) will return YES if the current executable seems to be linked on or after the specified release. Example: If you specify CFSystemVersionPuma (10.1), you will get back true for executables linked on Puma or Jaguar(10.2), but false for those linked on Cheetah (10.0) or any of its software updates (10.0.x). You will also get back false for any app whose version info could not be figured out.
-    This function caches its results, so no need to cache at call sites.
+// For non-Darwin platforms _CFExecutableLinkedOnOrAfter(…) always returns true.
 
-  Note that for non-MACH this function always returns true.
-*/
 typedef CF_ENUM(CFIndex, CFSystemVersion) {
     CFSystemVersionCheetah = 0,         /* 10.0 */
     CFSystemVersionPuma = 1,            /* 10.1 */
@@ -294,10 +298,6 @@ enum {
 /* CFStringEncoding SPI */
 /* When set, CF encoding conversion engine keeps ASCII compatibility. (i.e. ASCII backslash <-> Unicode backslash in MacJapanese */
 CF_EXPORT void _CFStringEncodingSetForceASCIICompatibility(Boolean flag);
-
-extern void __CFSetCharToUniCharFunc(Boolean (*func)(UInt32 flags, UInt8 ch, UniChar *unicodeChar));
-extern UniChar __CFCharToUniCharTable[256];
-
 
 #if defined(CF_INLINE)
 CF_INLINE const UniChar *CFStringGetCharactersPtrFromInlineBuffer(CFStringInlineBuffer *buf, CFRange desiredRange) {
@@ -550,14 +550,6 @@ CF_EXPORT void _CFLocaleResetCurrent(void);
 CF_EXPORT CFMutableStringRef _CFCreateApplicationRepositoryPath(CFAllocatorRef alloc, int nFolder);
 #endif
 
-#if TARGET_OS_WIN32
-#include <CoreFoundation/CFMessagePort.h>
-
-#define CF_MESSAGE_PORT_CLONE_MESSAGE_ID -1209
-CF_EXPORT CFMessagePortRef	CFMessagePortCreateUber(CFAllocatorRef allocator, CFStringRef name, CFMessagePortCallBack callout, CFMessagePortContext *context, Boolean *shouldFreeInfo, Boolean isRemote);
-CF_EXPORT void CFMessagePortSetCloneCallout(CFMessagePortRef ms, CFMessagePortCallBack cloneCallout);
-#endif
-
 #if (TARGET_OS_MAC && !(TARGET_OS_EMBEDDED || TARGET_OS_IPHONE || TARGET_OS_LINUX)) || (TARGET_OS_EMBEDDED || TARGET_OS_IPHONE)
 #include <CoreFoundation/CFMessagePort.h>
 
@@ -571,14 +563,11 @@ CF_EXPORT CFMessagePortRef _CFMessagePortCreateLocalEx(CFAllocatorRef allocator,
 
 #endif
 
-#if TARGET_OS_MAC || TARGET_OS_EMBEDDED || TARGET_OS_IPHONE
-#include <pthread.h>
-#elif !TARGET_OS_LINUX
-// Avoid including the pthread header
-#ifndef HAVE_STRUCT_TIMESPEC
-#define HAVE_STRUCT_TIMESPEC 1
-struct timespec { long tv_sec; long tv_nsec; };
+#if __has_include(<unistd.h>)
+#include <unistd.h>
 #endif
+#if _POSIX_THREADS
+#include <pthread.h>
 #endif
 
 CF_INLINE CFAbsoluteTime _CFAbsoluteTimeFromFileTimeSpec(struct timespec ts) {
@@ -624,7 +613,6 @@ CF_EXPORT CFPropertyListRef _CFBundleCreateFilteredLocalizedInfoPlist(CFBundleRe
 
 CF_EXPORT CFStringRef _CFGetWindowsAppleAppDataDirectory(void);
 CF_EXPORT CFArrayRef _CFGetWindowsBinaryDirectories(void);
-CF_EXPORT CFStringRef _CFGetWindowsAppleSystemLibraryDirectory(void);
 
 // If your Windows application does not use a CFRunLoop on the main thread (perhaps because it is reserved for handling UI events via Windows API), then call this function to make distributed notifications arrive using a different run loop.
 CF_EXPORT void _CFNotificationCenterSetRunLoop(CFNotificationCenterRef nc, CFRunLoopRef rl);

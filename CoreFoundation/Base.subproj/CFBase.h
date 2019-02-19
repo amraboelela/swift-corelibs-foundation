@@ -1,7 +1,7 @@
 /*	CFBase.h
-	Copyright (c) 1998-2017, Apple Inc. and the Swift project authors
+	Copyright (c) 1998-2018, Apple Inc. and the Swift project authors
  
-	Portions Copyright (c) 2014-2017, Apple Inc. and the Swift project authors
+	Portions Copyright (c) 2014-2018, Apple Inc. and the Swift project authors
 	Licensed under Apache License v2.0 with Runtime Library Exception
 	See http://swift.org/LICENSE.txt for license information
 	See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
@@ -127,21 +127,23 @@
 #endif
 
 #if TARGET_OS_WIN32
-    #if !defined(CF_EXPORT)
-        #if defined(CF_BUILDING_CF) && defined(__cplusplus)
-            #define CF_EXPORT extern "C" __declspec(dllexport)
-        #elif defined(CF_BUILDING_CF) && !defined(__cplusplus)
-            #define CF_EXPORT extern __declspec(dllexport)
-        #elif defined(__cplusplus)
-            #define CF_EXPORT extern "C" __declspec(dllimport)
+    #if defined(__cplusplus)
+        #define _CF_EXTERN extern "C"
+    #else
+        #define _CF_EXTERN extern
+    #endif
+
+    #if defined(_USRDLL)
+        #if defined(CoreFoundation_EXPORTS) || defined(CF_BUILDING_CF)
+            #define CF_EXPORT _CF_EXTERN __declspec(dllexport)
         #else
-            #define CF_EXPORT extern __declspec(dllimport)
+            #define CF_EXPORT _CF_EXTERN __declspec(dllimport)
         #endif
+    #else
+        #define CF_EXPORT _CF_EXTERN
     #endif
 #else
-
 #define CF_EXPORT extern
-
 #endif
 
 CF_EXTERN_C_BEGIN
@@ -682,10 +684,8 @@ CFTypeRef CFMakeCollectable(CFTypeRef cf) CF_AUTOMATED_REFCOUNT_UNAVAILABLE;
 
 #if DEPLOYMENT_RUNTIME_SWIFT
 
-#define _CF_SWIFT_RC_PINNED_FLAG 0x1
-#define _CF_SWIFT_RC_FLAGS_COUNT 2
-#define _CF_CONSTANT_OBJECT_STRONG_RC ((1 << _CF_SWIFT_RC_FLAGS_COUNT) | _CF_SWIFT_RC_PINNED_FLAG)
-
+#define _CF_SWIFT_RC_PINNED_FLAG (0x1)
+#define _CF_CONSTANT_OBJECT_STRONG_RC ((uintptr_t)_CF_SWIFT_RC_PINNED_FLAG)
 #endif
 
 CF_EXTERN_C_END

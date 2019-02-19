@@ -227,8 +227,8 @@ public struct URLRequest : ReferenceConvertible, Equatable, Hashable {
         }
     }
     
-    public var hashValue: Int {
-        return _handle.map { $0.hashValue }
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(_handle.map { $0 })
     }
     
     public static func ==(lhs: URLRequest, rhs: URLRequest) -> Bool {
@@ -263,11 +263,11 @@ extension URLRequest : CustomStringConvertible, CustomDebugStringConvertible, Cu
         c.append((label: "httpBodyStream", value: httpBodyStream as Any))
         c.append((label: "httpShouldHandleCookies", value: httpShouldHandleCookies))
         c.append((label: "httpShouldUsePipelining", value: httpShouldUsePipelining))
-        return Mirror(self, children: c, displayStyle: Mirror.DisplayStyle.struct)
+        return Mirror(self, children: c, displayStyle: .struct)
     }
 }
 
-extension URLRequest : _ObjectTypeBridgeable {
+extension URLRequest : _ObjectiveCBridgeable {
     public static func _getObjectiveCType() -> Any.Type {
         return NSURLRequest.self
     }

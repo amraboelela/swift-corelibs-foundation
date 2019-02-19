@@ -26,6 +26,7 @@ There is no _Complete_ status for test coverage because there are always additio
 ### Entities
 
 * **Runtime**: The basis for interoperability.
+
     The classes and methods in this group provide an interface for interoperability between C code and Swift. They also provide common layers used throughout the framework such as the root class `NSObject`.
 
     | Entity Name             | Status          | Test Coverage | Notes                                                                       |
@@ -81,7 +82,7 @@ There is no _Complete_ status for test coverage because there are always additio
     | `URLSessionTask`             | Mostly Complete | Incomplete    | `cancel()`, `createTransferState(url:)` with streams, and others remain unimplemented                              |
     | `URLSessionDataTask`         | Complete        | Incomplete    |                                                                                                                    |
     | `URLSessionUploadTask`       | Complete        | None          |                                                                                                                    |
-    | `URLSessionDownloadTask`     | Incomplete      | Incomplete    | `cancel(byProducingResumeData:)` remains unimplemented                                                             |
+    | `URLSessionDownloadTask`     | Incomplete      | Incomplete    |                                                                                                                  |
     | `URLSessionStreamTask`       | Unimplemented   | None          |                                                                                                                    |
     | `TaskRegistry`               | N/A             | N/A           | For internal use only                                                                                              |
     | `TransferState`              | N/A             | N/A           | For internal use only                                                                                              |

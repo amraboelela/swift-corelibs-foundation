@@ -7,15 +7,6 @@
 // See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 
-
-#if DEPLOYMENT_RUNTIME_OBJC || os(Linux)
-    import Foundation
-    import XCTest
-#else
-    import SwiftFoundation
-    import SwiftXCTest
-#endif
-
 enum XMLParserDelegateEvent {
     case startDocument
     case endDocument
@@ -74,6 +65,7 @@ class TestXMLParser : XCTestCase {
             ("test_withData", test_withData),
             ("test_withDataEncodings", test_withDataEncodings),
             ("test_withDataOptions", test_withDataOptions),
+            ("test_sr9758_abortParsing", test_sr9758_abortParsing),
         ]
     }
 
@@ -139,7 +131,7 @@ class TestXMLParser : XCTestCase {
 
     func test_withDataOptions() {
         let xml = TestXMLParser.xmlUnderTest()
-        let parser = XMLParser(data: xml.data(using: String.Encoding.utf8)!)
+        let parser = XMLParser(data: xml.data(using: .utf8)!)
         parser.shouldProcessNamespaces = true
         parser.shouldReportNamespacePrefixes = true
         parser.shouldResolveExternalEntities = true
@@ -148,6 +140,18 @@ class TestXMLParser : XCTestCase {
         let res = parser.parse()
         XCTAssertEqual(stream.events, TestXMLParser.xmlUnderTestExpectedEvents(namespaces: true)  )
         XCTAssertTrue(res)
+    }
+
+    func test_sr9758_abortParsing() {
+        class Delegate: NSObject, XMLParserDelegate {
+            func parserDidStartDocument(_ parser: XMLParser) { parser.abortParsing() }
+        }
+        let xml = TestXMLParser.xmlUnderTest(encoding: .utf8)
+        let parser = XMLParser(data: xml.data(using: .utf8)!)
+        let delegate = Delegate()
+        parser.delegate = delegate
+        XCTAssertFalse(parser.parse())
+        XCTAssertNotNil(parser.parserError)
     }
 
 }

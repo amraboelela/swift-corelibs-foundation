@@ -7,16 +7,6 @@
 // See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 
-
-#if DEPLOYMENT_RUNTIME_OBJC || os(Linux)
-import Foundation
-import XCTest
-#else
-import SwiftFoundation
-import SwiftXCTest
-#endif
-
-
 class TestIndexSet : XCTestCase {
     
     static var allTests: [(String, (TestIndexSet) -> () throws -> Void)] {
@@ -40,6 +30,7 @@ class TestIndexSet : XCTestCase {
             ("testIndexRange", testIndexRange),
             ("testMutation", testMutation),
             ("testContainsAndIntersects", testContainsAndIntersects),
+            ("testContainsIndexSet", testContainsIndexSet),
             ("testIteration", testIteration),
             ("testRangeIteration", testRangeIteration),
             ("testSubrangeIteration", testSubrangeIteration),
@@ -148,7 +139,7 @@ class TestIndexSet : XCTestCase {
     }
     
     func test_removal() {
-        let removalSet = NSMutableIndexSet(indexesIn: NSRange(location: 0, length: 10))
+        var removalSet = NSMutableIndexSet(indexesIn: NSRange(location: 0, length: 10))
         removalSet.remove(0)
         removalSet.remove(in: NSRange(location: 9, length: 5))
         removalSet.remove(in: NSRange(location: 2, length: 4))
@@ -156,12 +147,41 @@ class TestIndexSet : XCTestCase {
         XCTAssertEqual(removalSet.firstIndex, 1)
         XCTAssertEqual(removalSet.lastIndex, 8)
         
-        var additionSet = IndexSet()
-        additionSet.insert(1)
-        additionSet.insert(integersIn: 6..<9)
+        var expected = IndexSet()
+        expected.insert(1)
+        expected.insert(integersIn: 6..<9)
+        XCTAssertTrue(removalSet.isEqual(to: expected))
         
-        XCTAssertTrue(removalSet.isEqual(to: additionSet))
+        // Removing a non-existent element has no effect
+        removalSet.remove(9)
+        XCTAssertTrue(removalSet.isEqual(to: expected))
         
+        removalSet.removeAllIndexes()
+        
+        expected = IndexSet()
+        XCTAssertTrue(removalSet.isEqual(to: expected))
+        
+        // Set removal
+        removalSet = NSMutableIndexSet(indexesIn: NSRange(location: 0, length: 10))
+        removalSet.remove(IndexSet(integersIn: 8..<11))
+        removalSet.remove(IndexSet(integersIn: 0..<2))
+        removalSet.remove(IndexSet(integersIn: 4..<6))
+        XCTAssertEqual(removalSet.count, 4)
+        XCTAssertEqual(removalSet.firstIndex, 2)
+        XCTAssertEqual(removalSet.lastIndex, 7)
+
+        expected = IndexSet()
+        expected.insert(integersIn: 2..<4)
+        expected.insert(integersIn: 6..<8)
+        XCTAssertTrue(removalSet.isEqual(to: expected))
+        
+        // Removing an empty set has no effect
+        removalSet.remove(IndexSet())
+        XCTAssertTrue(removalSet.isEqual(to: expected))
+        
+        // Removing non-existent elements has no effect
+        removalSet.remove(IndexSet(integersIn: 0..<2))
+        XCTAssertTrue(removalSet.isEqual(to: expected))
     }
     
     func test_addition() {
@@ -406,6 +426,42 @@ class TestIndexSet : XCTestCase {
         XCTAssertFalse(someIndexes.intersects(integersIn: 0..<0))
         XCTAssertFalse(someIndexes.intersects(integersIn: 10...12))
         XCTAssertFalse(someIndexes.intersects(integersIn: 10..<12))
+    }
+
+    func testContainsIndexSet() {
+        var someIndexes = IndexSet()
+        someIndexes.insert(integersIn: 1..<2)
+        someIndexes.insert(integersIn: 100..<200)
+        someIndexes.insert(integersIn: 1000..<2000)
+
+        let contained1 = someIndexes
+        let contained2 = IndexSet(integersIn: 120..<150)
+
+        var contained3 = IndexSet()
+        contained3.insert(integersIn: 100..<200)
+        contained3.insert(integersIn: 1500..<1600)
+
+        let notContained1 = IndexSet(integer: 9)
+        let notContained2 = IndexSet(integersIn: 150..<300)
+        var notContained3 = IndexSet()
+        notContained3.insert(integersIn: 1..<2)
+        notContained3.insert(integersIn: 100..<200)
+        notContained3.insert(integersIn: 1000..<2000)
+        notContained3.insert(integersIn: 3000..<5000)
+
+        XCTAssertTrue(someIndexes.contains(integersIn: contained1))
+        XCTAssertTrue(someIndexes.contains(integersIn: contained2))
+        XCTAssertTrue(someIndexes.contains(integersIn: contained3))
+
+        XCTAssertFalse(someIndexes.contains(integersIn: notContained1))
+        XCTAssertFalse(someIndexes.contains(integersIn: notContained2))
+        XCTAssertFalse(someIndexes.contains(integersIn: notContained3))
+
+        let emptySet = IndexSet()
+
+        XCTAssertTrue(emptySet.contains(integersIn: emptySet))
+        XCTAssertTrue(someIndexes.contains(integersIn: emptySet))
+        XCTAssertFalse(emptySet.contains(integersIn: someIndexes))
     }
     
     func testIteration() {

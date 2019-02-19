@@ -1,7 +1,7 @@
 /*	CFSortFunctions.c
-	Copyright (c) 1999-2017, Apple Inc. and the Swift project authors
+	Copyright (c) 1999-2018, Apple Inc. and the Swift project authors
  
-	Portions Copyright (c) 2014-2017, Apple Inc. and the Swift project authors
+	Portions Copyright (c) 2014-2018, Apple Inc. and the Swift project authors
 	Licensed under Apache License v2.0 with Runtime Library Exception
 	See http://swift.org/LICENSE.txt for license information
 	See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
@@ -12,12 +12,12 @@
 #include "CFInternal.h"
 #if __HAS_DISPATCH__
 #include <dispatch/dispatch.h>
-#if (DEPLOYMENT_TARGET_MACOSX || DEPLOYMENT_TARGET_EMBEDDED) && __has_include(<dispatch/private.h>)
+#if TARGET_OS_MAC && __has_include(<dispatch/private.h>)
 #include <dispatch/private.h>
 #else
 #define DISPATCH_APPLY_CURRENT_ROOT_QUEUE ((dispatch_queue_t _Nonnull)0)
-#endif
-#endif
+#endif // TARGET_OS_MAC && __has_include(<dispatch/private.h>)
+#endif // __HAS_DISPATCH__
 #include "CFLogUtilities.h"
 #include "CFInternal.h"
 
@@ -333,7 +333,7 @@ CF_INLINE _CFOverflowResult _CFIntegerProductWouldOverflow(CFIndex si_a, CFIndex
         result = _CFOverflowResultNegativeParameters;
     } else {
         int32_t err = CHECKINT_NO_ERROR;
-#if __LP64__
+#if TARGET_RT_64_BIT
         __checkint_int64_mul(si_a, si_b, &err);
 #else
         __checkint_int32_mul(si_a, si_b, &err);
@@ -347,7 +347,7 @@ CF_INLINE _CFOverflowResult _CFIntegerProductWouldOverflow(CFIndex si_a, CFIndex
 CF_INLINE _CFOverflowResult _CFPointerSumWouldOverflow(void *p, size_t n) {
     _CFOverflowResult result = _CFOverflowResultOK;
     int32_t err = CHECKINT_NO_ERROR;
-#if __LP64__
+#if TARGET_RT_64_BIT
     __checkint_uint64_add((uint64_t)p, (uint64_t)n, &err);
 #else
     __checkint_uint32_add((uint32_t)p, (uint32_t)n, &err);

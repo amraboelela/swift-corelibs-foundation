@@ -7,24 +7,13 @@
 // See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 
-
-
-#if DEPLOYMENT_RUNTIME_OBJC || os(Linux)
-    import Foundation
-    import XCTest
-#else
-    import SwiftFoundation
-    import SwiftXCTest
-#endif
-
-
+import CoreFoundation
 
 class TestTimeZone: XCTestCase {
 
     static var allTests: [(String, (TestTimeZone) -> () throws -> Void)] {
         return [
-            // Disabled see https://bugs.swift.org/browse/SR-300
-            // ("test_abbreviation", test_abbreviation),
+            ("test_abbreviation", test_abbreviation),
 
             // Disabled because `CFTimeZoneSetAbbreviationDictionary()` attempts
             // to release non-CF objects while removing values from
@@ -36,10 +25,10 @@ class TestTimeZone: XCTestCase {
             ("test_initializingTimeZoneWithOffset", test_initializingTimeZoneWithOffset),
             ("test_initializingTimeZoneWithAbbreviation", test_initializingTimeZoneWithAbbreviation),
             ("test_localizedName", test_localizedName),
-            // Also disabled due to https://bugs.swift.org/browse/SR-300
-            // ("test_systemTimeZoneUsesSystemTime", test_systemTimeZoneUsesSystemTime),
-
+            ("test_systemTimeZoneUsesSystemTime", test_systemTimeZoneUsesSystemTime),
             ("test_customMirror", test_tz_customMirror),
+            ("test_knownTimeZones", test_knownTimeZones),
+            ("test_systemTimeZoneName", test_systemTimeZoneName),
         ]
     }
 
@@ -182,7 +171,7 @@ class TestTimeZone: XCTestCase {
         var lt = tm()
         localtime_r(&t, &lt)
         let zoneName = NSTimeZone.system.abbreviation() ?? "Invalid Abbreviation"
-        let expectedName = String(cString: lt.tm_zone, encoding: String.Encoding.ascii) ?? "Invalid Zone"
+        let expectedName = String(cString: lt.tm_zone, encoding: .ascii) ?? "Invalid Zone"
         XCTAssertEqual(zoneName, expectedName, "expected name \"\(expectedName)\" is not equal to \"\(zoneName)\"")
     }
 
@@ -200,5 +189,26 @@ class TestTimeZone: XCTestCase {
         XCTAssertNotNil(children["kind"])
         XCTAssertNotNil(children["secondsFromGMT"])
         XCTAssertNotNil(children["isDaylightSavingTime"])
+    }
+
+    func test_knownTimeZones() {
+        let timeZones = TimeZone.knownTimeZoneIdentifiers.sorted()
+        XCTAssertTrue(timeZones.count > 0, "No known timezones")
+        for tz in timeZones {
+            XCTAssertNotNil(TimeZone(identifier: tz), "Cant instantiate valid timeZone: \(tz)")
+        }
+    }
+
+    func test_systemTimeZoneName() {
+        // Ensure that the system time zone creates names the same way as creating them with an identifier.
+        // If it isn't the same, bugs in DateFormat can result, but in this specific case, the bad length
+        // is only visible to CoreFoundation APIs, and the Swift versions hide it, making it hard to detect.
+        let timeZone = CFTimeZoneCopySystem()
+        let timeZoneName = CFTimeZoneGetName(timeZone)
+
+        let createdTimeZone = TimeZone(identifier: TimeZone.current.identifier)!
+
+        XCTAssertEqual(CFStringGetLength(timeZoneName), TimeZone.current.identifier.count)
+        XCTAssertEqual(CFStringGetLength(timeZoneName), createdTimeZone.identifier.count)
     }
 }

@@ -77,7 +77,7 @@ open class NSRegularExpression: NSObject, NSCopying, NSCoding {
     
     public init(pattern: String, options: Options = []) throws {
         var error: Unmanaged<CFError>?
-#if os(OSX) || os(iOS)
+#if os(macOS) || os(iOS)
         let opt =  _CFRegularExpressionOptions(rawValue: options.rawValue)
 #else
         let opt = _CFRegularExpressionOptions(options.rawValue)
@@ -94,7 +94,7 @@ open class NSRegularExpression: NSObject, NSCopying, NSCoding {
     }
     
     open var options: Options {
-#if os(OSX) || os(iOS)
+#if os(macOS) || os(iOS)
         let opt = _CFRegularExpressionGetOptions(_internal).rawValue
 #else
         let opt = _CFRegularExpressionGetOptions(_internal)
@@ -106,7 +106,11 @@ open class NSRegularExpression: NSObject, NSCopying, NSCoding {
     open var numberOfCaptureGroups: Int {
         return _CFRegularExpressionGetNumberOfCaptureGroups(_internal)
     }
-    
+
+    internal func _captureGroupNumber(withName name: String) -> Int {
+        return _CFRegularExpressionGetCaptureGroupNumberWithName(_internal, name._cfObject)
+    }
+
     /* This class method will produce a string by adding backslash escapes as necessary to the given string, to escape any characters that would otherwise be treated as pattern metacharacters.
     */
     open class func escapedPattern(for string: String) -> String { 
@@ -149,30 +153,19 @@ internal class _NSRegularExpressionMatcher {
     }
 }
 
-internal func _NSRegularExpressionMatch(_ context: UnsafeMutableRawPointer?, ranges: UnsafeMutablePointer<CFRange>?, count: CFIndex, options: _CFRegularExpressionMatchingOptions, stop: UnsafeMutablePointer<_DarwinCompatibleBoolean>) -> Void {
+internal func _NSRegularExpressionMatch(_ context: UnsafeMutableRawPointer?, ranges: UnsafeMutablePointer<CFRange>?, count: CFIndex, flags: _CFRegularExpressionMatchingFlags, stop: UnsafeMutablePointer<_DarwinCompatibleBoolean>) -> Void {
     let matcher = unsafeBitCast(context, to: _NSRegularExpressionMatcher.self)
-    if ranges == nil {
-#if os(OSX) || os(iOS)
-        let opts = options.rawValue
+#if os(macOS) || os(iOS)
+    let flags = NSRegularExpression.MatchingFlags(rawValue: flags.rawValue)
 #else
-        let opts = options
+    let flags = NSRegularExpression.MatchingFlags(rawValue: flags)
 #endif
-        stop.withMemoryRebound(to: ObjCBool.self, capacity: 1, {
-            matcher.block(nil, NSRegularExpression.MatchingFlags(rawValue: opts), $0)
-        })
-    } else {
-        let result = ranges!.withMemoryRebound(to: NSRange.self, capacity: count) { rangePtr in
-            NSTextCheckingResult.regularExpressionCheckingResultWithRanges(rangePtr, count: count, regularExpression: matcher.regex)
-        }
-#if os(OSX) || os(iOS)
-        let flags = NSRegularExpression.MatchingFlags(rawValue: options.rawValue)
-#else
-        let flags = NSRegularExpression.MatchingFlags(rawValue: options)
-#endif
-        stop.withMemoryRebound(to: ObjCBool.self, capacity: 1, {
-            matcher.block(result, flags, $0)
-        })
+    let result = ranges?.withMemoryRebound(to: NSRange.self, capacity: count) { rangePtr in
+        NSTextCheckingResult.regularExpressionCheckingResultWithRanges(rangePtr, count: count, regularExpression: matcher.regex)
     }
+    stop.withMemoryRebound(to: ObjCBool.self, capacity: 1, {
+        matcher.block(result, flags, $0)
+    })
 }
 
 extension NSRegularExpression {
@@ -183,7 +176,7 @@ extension NSRegularExpression {
     public func enumerateMatches(in string: String, options: NSRegularExpression.MatchingOptions = [], range: NSRange, using block: @escaping (NSTextCheckingResult?, NSRegularExpression.MatchingFlags, UnsafeMutablePointer<ObjCBool>) -> Swift.Void) {
         let matcher = _NSRegularExpressionMatcher(regex: self, block: block)
         withExtendedLifetime(matcher) { (m: _NSRegularExpressionMatcher) -> Void in
-#if os(OSX) || os(iOS)
+#if os(macOS) || os(iOS)
         let opts = _CFRegularExpressionMatchingOptions(rawValue: options.rawValue)
 #else
         let opts = _CFRegularExpressionMatchingOptions(options.rawValue)

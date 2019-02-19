@@ -251,19 +251,16 @@ extension NSRange {
 
 extension NSRange {
     public init<R: RangeExpression>(_ region: R)
-        where R.Bound: FixedWidthInteger, R.Bound.Stride : SignedInteger {
+        where R.Bound: FixedWidthInteger {
             let r = region.relative(to: 0..<R.Bound.max)
             location = numericCast(r.lowerBound)
             length = numericCast(r.count)
     }
     
     public init<R: RangeExpression, S: StringProtocol>(_ region: R, in target: S)
-        where R.Bound == S.Index, S.Index == String.Index {
+        where R.Bound == S.Index {
             let r = region.relative(to: target)
-            self = NSRange(
-                location: r.lowerBound.encodedOffset - target.startIndex.encodedOffset,
-                length: r.upperBound.encodedOffset - r.lowerBound.encodedOffset
-            )
+            self.init(target._toUTF16Offsets(r))
     }
     
     @available(swift, deprecated: 4, renamed: "Range.init(_:)")
@@ -309,9 +306,9 @@ extension NSRange : CustomReflectable {
     }
 }
 
-extension NSRange : CustomPlaygroundQuickLookable {
-    public var customPlaygroundQuickLook: PlaygroundQuickLook {
-        return .range(Int64(location), Int64(length))
+extension NSRange : CustomPlaygroundDisplayConvertible {
+    public var playgroundDescription: Any {
+        return (Int64(location), Int64(length))
     }
 }
 
@@ -351,11 +348,6 @@ extension NSRange {
     public init(_ x: Range<Int>) {
         location = x.lowerBound
         length = x.count
-    }
-    
-    internal func toCountableRange() -> CountableRange<Int>? {
-        if location == NSNotFound { return nil }
-        return location..<(location+length)
     }
 }
     

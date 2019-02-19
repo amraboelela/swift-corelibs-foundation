@@ -7,15 +7,6 @@
 // See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 
-
-#if DEPLOYMENT_RUNTIME_OBJC || os(Linux)
-import Foundation
-import XCTest
-#else
-import SwiftFoundation
-import SwiftXCTest
-#endif
-
 import CoreFoundation
 
 internal func testBundle() -> Bundle {
@@ -30,6 +21,19 @@ internal func testBundle() -> Bundle {
     return Bundle.main
     #endif
 }
+
+internal func testBundleName() -> String {
+    // Either 'TestFoundation' or 'DarwinCompatibilityTests'
+    return testBundle().infoDictionary!["CFBundleName"] as! String
+}
+
+internal func xdgTestHelperURL() -> URL {
+    guard let url = testBundle().url(forAuxiliaryExecutable: "xdgTestHelper") else {
+        fatalError("Cant find xdgTestHelper")
+    }
+    return url
+}
+
 
 class BundlePlayground {
     enum Layout {
@@ -129,7 +133,7 @@ class BundlePlayground {
                 }
                 
                 self.bundlePath = bundleURL.path
-            } catch _ {
+            } catch {
                 return false
             }
             
@@ -172,7 +176,7 @@ class BundlePlayground {
                 }
                 
                 self.bundlePath = resourcesDirectory.path
-            } catch _ {
+            } catch {
                 return false
             }
             
@@ -206,7 +210,7 @@ class BundlePlayground {
                 }
                 
                 self.bundlePath = resourcesDirectory.path
-            } catch _ {
+            } catch {
                 return false
             }
         }
@@ -218,12 +222,8 @@ class BundlePlayground {
     func destroy() {
         guard let path = self.playgroundPath else { return }
         self.playgroundPath = nil
-        
-        do {
-            try FileManager.default.removeItem(atPath: path)
-        } catch _ {
-            // ¯\_(ツ)_/¯ We did what we could.
-        }
+
+        try? FileManager.default.removeItem(atPath: path)
     }
     
     deinit {
@@ -246,6 +246,7 @@ class TestBundle : XCTestCase {
             ("test_bundlePreflight", test_bundlePreflight),
             ("test_bundleFindExecutable", test_bundleFindExecutable),
             ("test_bundleFindAuxiliaryExecutables", test_bundleFindAuxiliaryExecutables),
+            ("test_mainBundleExecutableURL", test_mainBundleExecutableURL),
         ]
     }
     
@@ -258,7 +259,7 @@ class TestBundle : XCTestCase {
         let path = bundle.bundlePath
         
         // etc
-        #if os(OSX)
+        #if os(macOS)
         XCTAssertEqual("\(path)/Contents/Resources", bundle.resourcePath)
         #if DARWIN_COMPATIBILITY_TESTS
         XCTAssertEqual("\(path)/Contents/MacOS/DarwinCompatibilityTests", bundle.executablePath)
@@ -358,11 +359,7 @@ class TestBundle : XCTestCase {
     }
     
     private func _cleanupPlayground(_ location: String) {
-        do {
-            try FileManager.default.removeItem(atPath: location)
-        } catch _ {
-            // Oh well
-        }
+        try? FileManager.default.removeItem(atPath: location)
     }
     
     func test_URLsForResourcesWithExtension() {
@@ -427,12 +424,22 @@ class TestBundle : XCTestCase {
             XCTAssertNotNil(bundle.executableURL)
         }
     }
-    
+
     func test_bundleFindAuxiliaryExecutables() {
         _withEachPlaygroundLayout { (playground) in
             let bundle = Bundle(path: playground.bundlePath)!
             XCTAssertNotNil(bundle.url(forAuxiliaryExecutable: _auxiliaryExecutable))
             XCTAssertNil(bundle.url(forAuxiliaryExecutable: "does_not_exist_at_all"))
         }
+    }
+
+    func test_mainBundleExecutableURL() {
+#if !DARWIN_COMPATIBILITY_TESTS // _CFProcessPath() is unavailable on native Foundation
+        let maybeURL = Bundle.main.executableURL
+        XCTAssertNotNil(maybeURL)
+        guard let url = maybeURL else { return }
+        
+        XCTAssertEqual(url.path, String(cString: _CFProcessPath()))
+#endif
     }
 }

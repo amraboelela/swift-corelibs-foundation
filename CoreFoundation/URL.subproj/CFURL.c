@@ -1,7 +1,7 @@
 /*	CFURL.c
-	Copyright (c) 1998-2017, Apple Inc. and the Swift project authors
+	Copyright (c) 1998-2018, Apple Inc. and the Swift project authors
  
-	Portions Copyright (c) 2014-2017, Apple Inc. and the Swift project authors
+	Portions Copyright (c) 2014-2018, Apple Inc. and the Swift project authors
 	Licensed under Apache License v2.0 with Runtime Library Exception
 	See http://swift.org/LICENSE.txt for license information
 	See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
@@ -13,7 +13,9 @@
 #include <CoreFoundation/CFCharacterSetPriv.h>
 #include <CoreFoundation/CFNumber.h>
 #include "CFInternal.h"
+#include "CFRuntime_Internal.h"
 #include <CoreFoundation/CFStringEncodingConverter.h>
+#include <stdatomic.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -27,7 +29,7 @@
 #include <sys/types.h>
 #if __has_include(<sys/syslog.h>)
 #include <sys/syslog.h>
-#elif __has_include(<syslog.h>)
+#else
 #include <syslog.h>
 #endif
 #include <CoreFoundation/CFURLPriv.h>
@@ -1631,9 +1633,7 @@ static void __CFURLDeallocate(CFTypeRef  cf) {
     atomic_store(&((struct __CFURL *)url)->_resourceInfo, (void *)0xdeadbeef); // 20362546: catch anyone using URL after it was released
 }
 
-static CFTypeID __kCFURLTypeID = _kCFRuntimeNotATypeID;
-
-static const CFRuntimeClass __CFURLClass = {
+const CFRuntimeClass __CFURLClass = {
     0,                                  // version
     "CFURL",                            // className
     NULL,                               // init
@@ -1654,9 +1654,7 @@ CF_INLINE CFURLRef _CFURLFromNSURL(CFURLRef url) {
 }
 
 CFTypeID CFURLGetTypeID(void) {
-    static dispatch_once_t initOnce;
-    dispatch_once(&initOnce, ^{ __kCFURLTypeID = _CFRuntimeRegisterClass(&__CFURLClass); });
-    return __kCFURLTypeID;
+    return _kCFRuntimeIDCFURL;
 }
 
 CF_PRIVATE void CFShowURL(CFURLRef url) {
@@ -2325,7 +2323,7 @@ static CFURLRef _CFURLCreateWithFileSystemRepresentation(CFAllocatorRef allocato
 #elif DEPLOYMENT_TARGET_WINDOWS
         CFStringRef filePath = CFStringCreateWithBytes(allocator, buffer, bufLen, CFStringFileSystemEncoding(), false);
         if ( filePath ) {
-            result = _CFURLCreateWithFileSystemPath(allocator, filePath, kCFURLWindowsPathStyle, isDirectory, baseURL);
+            result = (struct __CFURL *)_CFURLCreateWithFileSystemPath(allocator, filePath, kCFURLWindowsPathStyle, isDirectory, baseURL);
             CFRelease(filePath);
         }
 #endif
@@ -4354,7 +4352,7 @@ static Boolean _fileSystemRepresentationHasFileIDPrefix(const UInt8 *buffer, CFI
 static Boolean _pathHasFileIDPrefix(CFStringRef path)
 {
     // path is not NULL, path has prefix "/.file/id=".
-#ifdef __CONSTANT_STRINGS__
+#if defined(__CONSTANT_CFSTRINGS__) && !DEPLOYMENT_RUNTIME_SWIFT // see rdar://44356272 — the implementation of CFSTR() in Swift is not constexpr, but the compiler will miscompile it and allow it to be assigned to static variables anyway.
     static const 
 #endif
     CFStringRef fileIDPreamble = CFSTR(FILE_ID_PREAMBLE);
@@ -4374,7 +4372,7 @@ CF_EXPORT CFStringRef CFURLCopyFileSystemPath(CFURLRef anURL, CFURLPathStyle pat
     
     if ( (pathStyle == kCFURLPOSIXPathStyle) && (CFURLGetBaseURL(anURL) == NULL) ) {
         if ( !CF_IS_OBJC(CFURLGetTypeID(), anURL) ) {
-            // We can grope the ivars
+            // We can access the ivars
             isCanonicalFileURL = ((anURL->_flags & IS_CANONICAL_FILE_URL) != 0);
             if ( isCanonicalFileURL ) {
                 CFIndex strLength = CFStringGetLength(CFURLGetString(anURL));
@@ -4415,7 +4413,7 @@ CFStringRef CFURLCreateStringWithFileSystemPath(CFAllocatorRef allocator, CFURLR
     CFStringRef relPath = NULL;
     
     if (!CF_IS_OBJC(CFURLGetTypeID(), anURL)) {
-        // We can grope the ivars
+        // We can access the ivars
         if (fsType == kCFURLPOSIXPathStyle) {
             if (anURL->_flags & POSIX_AND_URL_PATHS_MATCH) {
                 relPath = _retainedComponentString(anURL, HAS_PATH, true, true);
@@ -4497,7 +4495,7 @@ Boolean CFURLGetFileSystemRepresentation(CFURLRef url, Boolean resolveAgainstBas
 #if DEPLOYMENT_TARGET_MACOSX || DEPLOYMENT_TARGET_EMBEDDED || DEPLOYMENT_TARGET_EMBEDDED_MINI || DEPLOYMENT_TARGET_LINUX
     if ( !resolveAgainstBase || (CFURLGetBaseURL(url) == NULL) ) {
         if (!CF_IS_OBJC(CFURLGetTypeID(), url)) {
-            // We can grope the ivars
+            // We can access the ivars
             if ( url->_flags & IS_CANONICAL_FILE_URL ) {
                 return CanonicalFileURLStringToFileSystemRepresentation(url->_string, buffer, bufLen);
             }
@@ -4701,6 +4699,53 @@ CFStringRef CFURLCopyPathExtension(CFURLRef url) {
         CFRelease(lastPathComp);
     }
     return ext;
+}
+
+static Boolean _CFURLHasFileURLScheme(CFURLRef url, Boolean *hasScheme)
+{
+    Boolean result;
+    CFURLRef baseURL = CFURLGetBaseURL(url);
+
+    if ( baseURL ) {
+        result = _CFURLHasFileURLScheme(baseURL, hasScheme);
+    }
+    else {
+        if ( CF_IS_OBJC(CFURLGetTypeID(), url) || (_getSchemeTypeFromFlags(url->_flags) == kHasUncommonScheme) ) {
+            // if it's not a CFURL or the scheme is not a common canonical-form scheme, determine the scheme the slower way.
+            CFStringRef scheme = CFURLCopyScheme(url);
+            if ( scheme ) {
+                if ( scheme == kCFURLFileScheme ) {
+                    result = true;
+                }
+                else {
+                    result = CFStringCompare(scheme, kCFURLFileScheme, kCFCompareCaseInsensitive) == kCFCompareEqualTo;
+                }
+                if ( hasScheme ) {
+                    *hasScheme = true;
+                }
+                CFRelease(scheme);
+            }
+            else {
+                if ( hasScheme ) {
+                    *hasScheme = false;
+                }
+                result = false;
+            }
+        }
+        else {
+            if ( hasScheme ) {
+                *hasScheme = (url->_flags & HAS_SCHEME) != 0;
+            }
+            result = (_getSchemeTypeFromFlags(url->_flags) == kHasFileScheme);
+        }
+    }
+    return ( result );
+}
+
+Boolean _CFURLIsFileURL(CFURLRef url)
+{
+    Boolean result = _CFURLHasFileURLScheme(url, NULL);
+    return ( result );
 }
 
 CFURLRef CFURLCreateCopyAppendingPathComponent(CFAllocatorRef allocator, CFURLRef url, CFStringRef pathComponent, Boolean isDirectory) {
@@ -5085,53 +5130,6 @@ Boolean CFURLIsFileReferenceURL(CFURLRef url)
     return ( result );
 }
 #endif
-
-static Boolean _CFURLHasFileURLScheme(CFURLRef url, Boolean *hasScheme)
-{
-    Boolean result;
-    CFURLRef baseURL = CFURLGetBaseURL(url);
-    
-    if ( baseURL ) {
-	result = _CFURLHasFileURLScheme(baseURL, hasScheme);
-    }
-    else {
-        if ( CF_IS_OBJC(CFURLGetTypeID(), url) || (_getSchemeTypeFromFlags(url->_flags) == kHasUncommonScheme) ) {
-            // if it's not a CFURL or the scheme is not a common canonical-form scheme, determine the scheme the slower way.
-            CFStringRef scheme = CFURLCopyScheme(url);
-            if ( scheme ) {
-                if ( scheme == kCFURLFileScheme ) {
-                    result = true;
-                }
-                else {
-                    result = CFStringCompare(scheme, kCFURLFileScheme, kCFCompareCaseInsensitive) == kCFCompareEqualTo;
-                }
-                if ( hasScheme ) {
-                    *hasScheme = true;
-                }
-                CFRelease(scheme);
-            }
-            else {
-                if ( hasScheme ) {
-                    *hasScheme = false;
-                }
-                result = false;
-            }
-        }
-        else {
-            if ( hasScheme ) {
-                *hasScheme = (url->_flags & HAS_SCHEME) != 0;
-            }
-            result = (_getSchemeTypeFromFlags(url->_flags) == kHasFileScheme);
-        }
-    }
-    return ( result );
-}
-
-Boolean _CFURLIsFileURL(CFURLRef url)
-{
-    Boolean result = _CFURLHasFileURLScheme(url, NULL);
-    return ( result );
-}
 
 #if DEPLOYMENT_TARGET_MACOSX || DEPLOYMENT_TARGET_EMBEDDED
 

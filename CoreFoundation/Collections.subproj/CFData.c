@@ -1,29 +1,31 @@
 /*	CFData.c
-	Copyright (c) 1998-2017, Apple Inc. and the Swift project authors
+	Copyright (c) 1998-2018, Apple Inc. and the Swift project authors
  
-	Portions Copyright (c) 2014-2017, Apple Inc. and the Swift project authors
+	Portions Copyright (c) 2014-2018, Apple Inc. and the Swift project authors
 	Licensed under Apache License v2.0 with Runtime Library Exception
 	See http://swift.org/LICENSE.txt for license information
 	See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 	Responsibility: Kevin Perry
 */
 
+#include <CoreFoundation/CFBase.h>
 #include <CoreFoundation/CFData.h>
 #include <CoreFoundation/CFPriv.h>
 #include "CFInternal.h"
+#include "CFRuntime_Internal.h"
 #include <string.h>
 
 
 
 
-#if __LP64__
+#if TARGET_RT_64_BIT
 #define CFDATA_MAX_SIZE	    ((1ULL << 42) - 1)
 #else
 #define CFDATA_MAX_SIZE	    ((1ULL << 31) - 1)
 #endif
 
 #if DEPLOYMENT_TARGET_MACOSX || DEPLOYMENT_TARGET_EMBEDDED || DEPLOYMENT_TARGET_EMBEDDED_MINI
-#import <mach/mach.h>
+#include <mach/mach.h>
 CF_INLINE unsigned long __CFPageSize() { return vm_page_size; }
 #elif DEPLOYMENT_TARGET_WINDOWS
 CF_INLINE unsigned long __CFPageSize() {
@@ -157,7 +159,7 @@ CF_INLINE void __CFDataSetNumBytes(CFMutableDataRef data, CFIndex v) {
     data->_capacity = v;
 }
 
-#if __LP64__
+#if TARGET_RT_64_BIT
 #define CHUNK_SIZE (1ULL << 29)
 #define LOW_THRESHOLD (1ULL << 20)
 #define HIGH_THRESHOLD (1ULL << 32)
@@ -179,7 +181,7 @@ CF_INLINE CFIndex __CFDataRoundUpCapacity(CFIndex capacity) {
 	return (1L << (long)flsl(capacity));
     } else {
 	/* Round up to next multiple of CHUNK_SIZE */
-	unsigned long newCapacity = CHUNK_SIZE * (1+(capacity >> ((long)flsl(CHUNK_SIZE)-1)));
+	unsigned long long newCapacity = CHUNK_SIZE * (1+(capacity >> ((long)flsl(CHUNK_SIZE)-1)));
 	return __CFMin(newCapacity, CFDATA_MAX_SIZE);
     }
 }
@@ -307,9 +309,7 @@ static void __CFDataDeallocate(CFTypeRef cf) {
     }
 }
 
-static CFTypeID __kCFDataTypeID = _kCFRuntimeNotATypeID;
-
-static const CFRuntimeClass __CFDataClass = {
+const CFRuntimeClass __CFDataClass = {
     _kCFRuntimeScannedObject,
     "CFData",
     NULL,	// init
@@ -322,9 +322,7 @@ static const CFRuntimeClass __CFDataClass = {
 };
 
 CFTypeID CFDataGetTypeID(void) {
-    static dispatch_once_t initOnce;
-    dispatch_once(&initOnce, ^{ __kCFDataTypeID = _CFRuntimeRegisterClass(&__CFDataClass); });
-    return __kCFDataTypeID;
+    return _kCFRuntimeIDCFData;
 }
 
 void _CFDataInit(CFMutableDataRef memory, CFOptionFlags variety, CFIndex capacity, const uint8_t *bytes, CFIndex length, Boolean noCopy) {
@@ -460,7 +458,7 @@ CFDataRef CFDataCreateCopy(CFAllocatorRef allocator, CFDataRef data) {
     Boolean allowRetain = true;
     if (allowRetain) {
         CF_OBJC_FUNCDISPATCHV(CFDataGetTypeID(), CFDataRef, (NSData *)data, copy);
-        CF_SWIFT_FUNCDISPATCHV(CFDataGetTypeID(), CFDataRef, (CFSwiftRef)data, NSObject.copyWithZone, NULL);
+        CF_SWIFT_FUNCDISPATCHV(CFDataGetTypeID(), CFDataRef, (CFSwiftRef)data, NSData.copy);
 
         // If the data isn't mutable...
         if (!__CFDataIsMutable(data)) {

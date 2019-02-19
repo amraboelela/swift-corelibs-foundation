@@ -68,10 +68,10 @@ public struct PersonNameComponents : ReferenceConvertible, Hashable, Equatable, 
         set { _applyMutation { $0.phoneticRepresentation = newValue } }
     }
     
-    public var hashValue : Int {
-        return _handle.map { $0.hash }
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(_handle.map { $0 })
     }
-    
+
     public static func ==(lhs : PersonNameComponents, rhs: PersonNameComponents) -> Bool {
         // Don't copy references here; no one should be storing anything
         return lhs._handle._uncopiedReference().isEqual(rhs._handle._uncopiedReference())
@@ -98,11 +98,11 @@ extension PersonNameComponents : CustomStringConvertible, CustomDebugStringConve
         if let r = nameSuffix { c.append((label: "nameSuffix", value: r)) }
         if let r = nickname { c.append((label: "nickname", value: r)) }
         if let r = phoneticRepresentation { c.append((label: "phoneticRepresentation", value: r)) }
-        return Mirror(self, children: c, displayStyle: Mirror.DisplayStyle.struct)
+        return Mirror(self, children: c, displayStyle: .struct)
     }
 }
 
-extension PersonNameComponents : _ObjectTypeBridgeable {
+extension PersonNameComponents : _ObjectiveCBridgeable {
     public static func _getObjectiveCType() -> Any.Type {
         return NSPersonNameComponents.self
     }

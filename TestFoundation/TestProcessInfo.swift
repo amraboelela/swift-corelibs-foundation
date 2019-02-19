@@ -7,16 +7,6 @@
 // See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 
-
-#if DEPLOYMENT_RUNTIME_OBJC || os(Linux)
-    import Foundation
-    import XCTest
-#else
-    import SwiftFoundation
-    import SwiftXCTest
-#endif
-
-
 class TestProcessInfo : XCTestCase {
     
     static var allTests: [(String, (TestProcessInfo) -> () throws -> Void)] {
@@ -34,15 +24,19 @@ class TestProcessInfo : XCTestCase {
         XCTAssertFalse(versionString.isEmpty)
         
         let version = processInfo.operatingSystemVersion
-        XCTAssertNotNil(version.majorVersion != 0)
+        XCTAssert(version.majorVersion != 0)
     }
     
     func test_processName() {
         // Assert that the original process name is "TestFoundation". This test
         // will fail if the test target ever gets renamed, so maybe it should
         // just test that the initial name is not empty or something?
-        let processInfo = ProcessInfo.processInfo
+#if DARWIN_COMPATIBILITY_TESTS
+        let targetName = "xctest"
+#else
         let targetName = "TestFoundation"
+#endif
+        let processInfo = ProcessInfo.processInfo
         let originalProcessName = processInfo.processName
         XCTAssertEqual(originalProcessName, targetName, "\"\(originalProcessName)\" not equal to \"TestFoundation\"")
         

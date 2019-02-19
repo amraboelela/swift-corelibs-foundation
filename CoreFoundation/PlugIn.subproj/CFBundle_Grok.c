@@ -1,7 +1,7 @@
 /*      CFBundle_Grok.c
-	Copyright (c) 1999-2017, Apple Inc. and the Swift project authors
+	Copyright (c) 1999-2018, Apple Inc. and the Swift project authors
  
-	Portions Copyright (c) 2014-2017, Apple Inc. and the Swift project authors
+	Portions Copyright (c) 2014-2018, Apple Inc. and the Swift project authors
 	Licensed under Apache License v2.0 with Runtime Library Exception
 	See http://swift.org/LICENSE.txt for license information
 	See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
@@ -23,9 +23,13 @@
 #endif /* USE_DYLD_PRIV */
 #endif /* BINARY_SUPPORT_DYLD */
 
+#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
 #include <unistd.h>
+#endif
 #include <fcntl.h>
+#if !DEPLOYMENT_TARGET_WINDOWS
 #include <sys/mman.h>
+#endif
 
 #if BINARY_SUPPORT_DLFCN
 #include <dlfcn.h>
@@ -42,9 +46,10 @@
 
 // Windows isspace implementation limits the input chars to < 256 in the ASCII range.  It will
 // assert in debug builds.  This is annoying.  We merrily grok chars > 256.
-static inline BOOL isspace(char c) {
+static inline _Bool _CF_isspace(int c) {
     return (c == ' ' || c == '\t' || c == '\n' || c == '\r'|| c == '\v' || c == '\f');
 }
+#define isspace _CF_isspace
 
 #else
 #define statinfo stat
@@ -82,7 +87,7 @@ static const uint32_t __CFBundleMagicNumbersArray[] = {
 };
 
 // string, with groups of 5 characters being 1 element in the array
-static const char * __CFBundleExtensionsArray =
+static const char * const __CFBundleExtensionsArray =
     "mach\0"  "mach\0"  "mach\0"  "mach\0"  "mach\0"  "mach\0"  "pef\0\0" "pef\0\0" 
     "elf\0\0" "jpeg\0"  "tiff\0"  "tiff\0"  "gif\0\0" "png\0\0" "icns\0"  "ico\0\0" 
     "rtf\0\0" "pdf\0\0" "ra\0\0\0""rm\0\0\0""au\0\0\0""au\0\0\0""iff\0\0" "riff\0"  
@@ -92,8 +97,8 @@ static const char * __CFBundleExtensionsArray =
     "ttf\0\0" "ttf\0\0" "otf\0\0" "dwg\0\0" "dgn\0\0" "dgn\0\0" "wrl\0\0" "xcf\0\0"
     "cpx\0\0" "dwf\0\0" "bom\0\0" "lit\0\0" "rtfd\0"  "caf\0\0" "cin\0\0" "exr\0\0";
 
-static const char * __CFBundleOOExtensionsArray = "sxc\0\0" "sxd\0\0" "sxg\0\0" "sxi\0\0" "sxm\0\0" "sxw\0\0";
-static const char * __CFBundleODExtensionsArray = "odc\0\0" "odf\0\0" "odg\0\0" "oth\0\0" "odi\0\0" "odm\0\0" "odp\0\0" "ods\0\0" "odt\0\0";
+static const char * const __CFBundleOOExtensionsArray = "sxc\0\0" "sxd\0\0" "sxg\0\0" "sxi\0\0" "sxm\0\0" "sxw\0\0";
+static const char * const __CFBundleODExtensionsArray = "odc\0\0" "odf\0\0" "odg\0\0" "oth\0\0" "odi\0\0" "odm\0\0" "odp\0\0" "ods\0\0" "odt\0\0";
 
 #define EXTENSION_LENGTH                5
 #define NUM_EXTENSIONS                  64
@@ -133,19 +138,19 @@ static char *_CFBundleGetSectData(const char *segname, const char *sectname, uns
     
     for (i = 0; i < numImages; i++) {
         if (mhp == (void *)_dyld_get_image_header(i)) {
-#if __LP64__
+#if TARGET_RT_64_BIT
             const struct section_64 *sp = getsectbynamefromheader_64((const struct mach_header_64 *)mhp, segname, sectname);
             if (sp) {
                 retval = (char *)(sp->addr + _dyld_get_image_vmaddr_slide(i));
                 localSize = (unsigned long)sp->size;
             }
-#else /* __LP64__ */
+#else /* TARGET_RT_64_BIT */
             const struct section *sp = getsectbynamefromheader((const struct mach_header *)mhp, segname, sectname);
             if (sp) {
                 retval = (char *)(sp->addr + _dyld_get_image_vmaddr_slide(i));
                 localSize = (unsigned long)sp->size;
             }
-#endif /* __LP64__ */
+#endif /* TARGET_RT_64_BIT */
             break;
         }
     }
@@ -165,11 +170,11 @@ CF_PRIVATE Boolean _CFBundleGrokObjCImageInfoFromMainExecutable(uint32_t *objcVe
     uint32_t localVersion = 0, localFlags = 0;
     char *bytes = NULL;
     unsigned long length = 0;
-#if __LP64__
+#if TARGET_RT_64_BIT
     if (getsegbyname(OBJC_SEGMENT_64)) bytes = _CFBundleGetSectData(OBJC_SEGMENT_64, IMAGE_INFO_SECTION_64, &length);
-#else /* __LP64__ */
+#else /* TARGET_RT_64_BIT */
     if (getsegbyname(OBJC_SEGMENT)) bytes = _CFBundleGetSectData(OBJC_SEGMENT, IMAGE_INFO_SECTION, &length);
-#endif /* __LP64__ */
+#endif /* TARGET_RT_64_BIT */
     if (bytes && length >= 8) {
         localVersion = *(uint32_t *)bytes;
         localFlags = *(uint32_t *)(bytes + 4);

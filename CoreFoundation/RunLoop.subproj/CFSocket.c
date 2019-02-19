@@ -1,7 +1,7 @@
 /*	CFSocket.c
-	Copyright (c) 1999-2017, Apple Inc.  and the Swift project authors
+	Copyright (c) 1999-2018, Apple Inc.  and the Swift project authors
  
-	Portions Copyright (c) 2014-2017, Apple Inc. and the Swift project authors
+	Portions Copyright (c) 2014-2018, Apple Inc. and the Swift project authors
 	Licensed under Apache License v2.0 with Runtime Library Exception
 	See http://swift.org/LICENSE.txt for license information
 	See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
@@ -177,7 +177,7 @@ static void __CFSocketDeallocate(CFTypeRef cf) {
 
 static CFTypeID __kCFSocketTypeID = _kCFRuntimeNotATypeID;
 
-static const CFRuntimeClass __CFSocketClass = {
+const CFRuntimeClass __CFSocketClass = {
     0,
     "CFSocket",
     NULL,      // init
@@ -942,13 +942,21 @@ Boolean __CFSocketGetBytesAvailable(CFSocketRef s, CFIndex* ctBytesAvailable) {
 #include <sys/un.h>
 #include <libc.h>
 #include <dlfcn.h>
-#endif
 #if TARGET_OS_CYGWIN
 #include <sys/socket.h>
 #endif
+#endif
+#if TARGET_OS_WIN32
+#include <WinSock2.h>
+#else
 #include <arpa/inet.h>
+#endif
+#if !DEPLOYMENT_TARGET_WINDOWS
 #include <sys/ioctl.h>
+#endif
+#if defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
 #include <unistd.h>
+#endif
 #include <fcntl.h>
 #include <CoreFoundation/CFArray.h>
 #include <CoreFoundation/CFData.h>
@@ -957,6 +965,10 @@ Boolean __CFSocketGetBytesAvailable(CFSocketRef s, CFIndex* ctBytesAvailable) {
 #include <CoreFoundation/CFString.h>
 #include <CoreFoundation/CFPropertyList.h>
 #include "CFInternal.h"
+#include "CFRuntime_Internal.h"
+#if DEPLOYMENT_TARGET_WINDOWS
+#include <process.h>
+#endif
 
 #ifndef NBBY
 #define NBBY 8
@@ -964,6 +976,8 @@ Boolean __CFSocketGetBytesAvailable(CFSocketRef s, CFIndex* ctBytesAvailable) {
 
 #if DEPLOYMENT_TARGET_WINDOWS
 
+// redefine this to the winsock error in this file
+#undef EINPROGRESS
 #define EINPROGRESS WSAEINPROGRESS
 
 // redefine this to the winsock error in this file
@@ -976,6 +990,7 @@ typedef int32_t fd_mask;
 typedef int socklen_t;
 
 #define gettimeofday _NS_gettimeofday
+struct timezone;
 CF_PRIVATE int _NS_gettimeofday(struct timeval *tv, struct timezone *tz);
 
 // although this is only used for debug info, we define it for compatibility
@@ -989,6 +1004,14 @@ CF_PRIVATE int _NS_gettimeofday(struct timeval *tv, struct timezone *tz);
         }							\
     } while (0)
 
+static void timeradd(struct timeval *a, struct timeval *b, struct timeval *res) {
+  res->tv_sec = a->tv_sec + b->tv_sec;
+  res->tv_usec = a->tv_usec + b->tv_usec;
+  if (res->tv_usec > 1e06) {
+    res->tv_sec++;
+    res->tv_usec -= 1e06;
+  }
+}
 
 #endif // DEPLOYMENT_TARGET_WINDOWS
 
@@ -1004,17 +1027,17 @@ CF_PRIVATE int _NS_gettimeofday(struct timeval *tv, struct timezone *tz);
 
 #include <sys/syslog.h>
 
-static pthread_t __cfSocketTid()
+static _CFThreadRef __cfSocketTid()
 {
 #if DEPLOYMENT_TARGET_MACOSX || DEPLOYMENT_TARGET_EMBEDDED
     uint64_t tid = 0;
     if (0 != pthread_threadid_np(NULL, &tid))
         tid = pthread_mach_thread_np(pthread_self());
-    return (pthread_t) tid;
+    return (_CFThreadRef) tid;
 #elif DEPLOYMENT_TARGET_WINDOWS
-    return (pthread_t) GetCurrentThreadId();
+    return (_CFThreadRef) GetCurrentThreadId();
 #else
-    return (pthread_t) pthread_self();
+    return (_CFThreadRef) pthread_self();
 #endif
 }
 
@@ -2151,7 +2174,7 @@ manageSelectError()
 
 static void *__CFSocketManager(void * arg)
 {
-#if (DEPLOYMENT_TARGET_LINUX && !TARGET_OS_CYGWIN) || DEPLOYMENT_TARGET_FREEBSD
+#if (TARGET_OS_LINUX && !TARGET_OS_CYGWIN) || TARGET_OS_BSD
     pthread_setname_np(pthread_self(), "com.apple.CFSocket.private");
 #elif TARGET_OS_CYGWIN
 #else
@@ -2470,9 +2493,7 @@ static void __CFSocketDeallocate(CFTypeRef cf) {
 	s->_bufferedReadError = 0;
 }
 
-static CFTypeID __kCFSocketTypeID = _kCFRuntimeNotATypeID;
-
-static const CFRuntimeClass __CFSocketClass = {
+const CFRuntimeClass __CFSocketClass = {
     0,
     "CFSocket",
     NULL,      // init
@@ -2487,7 +2508,6 @@ static const CFRuntimeClass __CFSocketClass = {
 CFTypeID CFSocketGetTypeID(void) {
     static dispatch_once_t initOnce;
     dispatch_once(&initOnce, ^{
-	__kCFSocketTypeID = _CFRuntimeRegisterClass(&__CFSocketClass); // initOnce covered
 #if DEPLOYMENT_TARGET_MACOSX || DEPLOYMENT_TARGET_EMBEDDED || DEPLOYMENT_TARGET_EMBEDDED_MINI
         struct rlimit lim1;
         int ret1 = getrlimit(RLIMIT_NOFILE, &lim1);
@@ -2505,7 +2525,7 @@ CFTypeID CFSocketGetTypeID(void) {
         }
 #endif
     });
-    return __kCFSocketTypeID;
+    return _kCFRuntimeIDCFSocket;
 }
 
 #if DEPLOYMENT_TARGET_WINDOWS
@@ -2596,7 +2616,7 @@ static CFSocketRef _CFSocketCreateWithNative(CFAllocatorRef allocator, CFSocketN
     if (INVALID_SOCKET != sock) CFDictionaryAddValue(__CFAllSockets, (void *)(uintptr_t)sock, memory);
     if (NULL == __CFSocketManagerThread) {
 #if DEPLOYMENT_TARGET_MACOSX || DEPLOYMENT_TARGET_EMBEDDED || DEPLOYMENT_TARGET_EMBEDDED_MINI || DEPLOYMENT_TARGET_LINUX || DEPLOYMENT_TARGET_FREEBSD
-        pthread_t tid = 0;
+        _CFThreadRef tid = 0;
         pthread_attr_t attr;
         pthread_attr_init(&attr);
         pthread_attr_setscope(&attr, PTHREAD_SCOPE_SYSTEM);
@@ -2606,7 +2626,7 @@ static CFSocketRef _CFSocketCreateWithNative(CFAllocatorRef allocator, CFSocketN
 #endif
         pthread_create(&tid, &attr, __CFSocketManager, 0);
         pthread_attr_destroy(&attr);
-//warning CF: we dont actually know that a pthread_t is the same size as void *
+        _Static_assert(sizeof(_CFThreadRef) == sizeof(void *), "_CFThreadRef is not pointer sized");
         __CFSocketManagerThread = (void *)tid;
 #elif DEPLOYMENT_TARGET_WINDOWS
         unsigned tid;

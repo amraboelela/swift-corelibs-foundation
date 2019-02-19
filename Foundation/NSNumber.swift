@@ -10,7 +10,7 @@
 
 import CoreFoundation
 
-#if os(OSX) || os(iOS)
+#if os(macOS) || os(iOS)
 internal let kCFNumberSInt8Type = CFNumberType.sInt8Type
 internal let kCFNumberSInt16Type = CFNumberType.sInt16Type
 internal let kCFNumberSInt32Type = CFNumberType.sInt32Type
@@ -32,7 +32,7 @@ internal let kCFNumberSInt128Type = CFNumberType(rawValue: 17)!
 internal let kCFNumberSInt128Type: CFNumberType = 17
 #endif
 
-extension Int8 : _ObjectTypeBridgeable {
+extension Int8 : _ObjectiveCBridgeable {
     @available(swift, deprecated: 4, renamed: "init(truncating:)")
     public init(_ number: NSNumber) {
         self = number.int8Value
@@ -70,7 +70,7 @@ extension Int8 : _ObjectTypeBridgeable {
     }
 }
 
-extension UInt8 : _ObjectTypeBridgeable {
+extension UInt8 : _ObjectiveCBridgeable {
     @available(swift, deprecated: 4, renamed: "init(truncating:)")
     public init(_ number: NSNumber) {
         self = number.uint8Value
@@ -108,7 +108,7 @@ extension UInt8 : _ObjectTypeBridgeable {
     }
 }
 
-extension Int16 : _ObjectTypeBridgeable {
+extension Int16 : _ObjectiveCBridgeable {
     @available(swift, deprecated: 4, renamed: "init(truncating:)")
     public init(_ number: NSNumber) {
         self = number.int16Value
@@ -146,7 +146,7 @@ extension Int16 : _ObjectTypeBridgeable {
     }
 }
 
-extension UInt16 : _ObjectTypeBridgeable {
+extension UInt16 : _ObjectiveCBridgeable {
     @available(swift, deprecated: 4, renamed: "init(truncating:)")
     public init(_ number: NSNumber) {
         self = number.uint16Value
@@ -184,7 +184,7 @@ extension UInt16 : _ObjectTypeBridgeable {
     }
 }
 
-extension Int32 : _ObjectTypeBridgeable {
+extension Int32 : _ObjectiveCBridgeable {
     @available(swift, deprecated: 4, renamed: "init(truncating:)")
     public init(_ number: NSNumber) {
         self = number.int32Value
@@ -222,7 +222,7 @@ extension Int32 : _ObjectTypeBridgeable {
     }
 }
 
-extension UInt32 : _ObjectTypeBridgeable {
+extension UInt32 : _ObjectiveCBridgeable {
     @available(swift, deprecated: 4, renamed: "init(truncating:)")
     public init(_ number: NSNumber) {
         self = number.uint32Value
@@ -260,7 +260,7 @@ extension UInt32 : _ObjectTypeBridgeable {
     }
 }
 
-extension Int64 : _ObjectTypeBridgeable {
+extension Int64 : _ObjectiveCBridgeable {
     @available(swift, deprecated: 4, renamed: "init(truncating:)")
     public init(_ number: NSNumber) {
         self = number.int64Value
@@ -298,7 +298,7 @@ extension Int64 : _ObjectTypeBridgeable {
     }
 }
 
-extension UInt64 : _ObjectTypeBridgeable {
+extension UInt64 : _ObjectiveCBridgeable {
     @available(swift, deprecated: 4, renamed: "init(truncating:)")
     public init(_ number: NSNumber) {
         self = number.uint64Value
@@ -336,7 +336,7 @@ extension UInt64 : _ObjectTypeBridgeable {
     }
 }
 
-extension Int : _ObjectTypeBridgeable {
+extension Int : _ObjectiveCBridgeable {
     @available(swift, deprecated: 4, renamed: "init(truncating:)")
     public init(_ number: NSNumber) {
         self = number.intValue
@@ -374,7 +374,7 @@ extension Int : _ObjectTypeBridgeable {
     }
 }
 
-extension UInt : _ObjectTypeBridgeable {
+extension UInt : _ObjectiveCBridgeable {
     @available(swift, deprecated: 4, renamed: "init(truncating:)")
     public init(_ number: NSNumber) {
         self = number.uintValue
@@ -412,7 +412,7 @@ extension UInt : _ObjectTypeBridgeable {
     }
 }
 
-extension Float : _ObjectTypeBridgeable {
+extension Float : _ObjectiveCBridgeable {
     @available(swift, deprecated: 4, renamed: "init(truncating:)")
     public init(_ number: NSNumber) {
         self = number.floatValue
@@ -461,7 +461,7 @@ extension Float : _ObjectTypeBridgeable {
     }
 }
 
-extension Double : _ObjectTypeBridgeable {
+extension Double : _ObjectiveCBridgeable {
     @available(swift, deprecated: 4, renamed: "init(truncating:)")
     public init(_ number: NSNumber) {
         self = number.doubleValue
@@ -512,7 +512,7 @@ extension Double : _ObjectTypeBridgeable {
     }
 }
 
-extension Bool : _ObjectTypeBridgeable {
+extension Bool : _ObjectiveCBridgeable {
     @available(swift, deprecated: 4, renamed: "init(truncating:)")
     public init(_ number: NSNumber) {
         self = number.boolValue
@@ -541,8 +541,16 @@ extension Bool : _ObjectTypeBridgeable {
     }
     
     public static func _conditionallyBridgeFromObjectiveC(_ x: NSNumber, result: inout Bool?) -> Bool {
-        result = x.boolValue
-        return true
+        if x === kCFBooleanTrue || NSNumber(value: 1) == x {
+            result = true
+            return true
+        } else if x === kCFBooleanFalse || NSNumber(value: 0) == x {
+            result = false
+            return true
+        }
+
+        result = nil
+        return false
     }
     
     public static func _unconditionallyBridgeFromObjectiveC(_ source: NSNumber?) -> Bool {
@@ -569,6 +577,10 @@ private struct CFSInt128Struct {
     var low: UInt64
 }
 
+fileprivate func cast<T, U>(_ t: T) -> U {
+  return t as! U
+}
+
 open class NSNumber : NSValue {
     typealias CFType = CFNumber
     // This layout MUST be the same as CFNumber so that they are bridgeable
@@ -584,6 +596,13 @@ open class NSNumber : NSValue {
     }
     
     open override func isEqual(_ value: Any?) -> Bool {
+        // IMPORTANT:
+        // .isEqual() is invoked by the bridging machinery that gets triggered whenever you use '(-a NSNumber value-) as{,?,!} Int', so using a refutable pattern ('case let other as NSNumber') below will cause an infinite loop if value is an Int, and similarly for other types we can bridge to.
+        // To prevent this, _this check must come first._ If you change it, _do not use the 'as' operator_ or any of its variants _unless_ you know that value _is_ actually a NSNumber to avoid infinite loops. ('is' is fine.)
+        if let value = value, value is NSNumber {
+            return compare(value as! NSNumber) == .orderedSame
+        }
+        
         switch value {
         case let other as Int:
             return intValue == other
@@ -591,8 +610,6 @@ open class NSNumber : NSValue {
             return doubleValue == other
         case let other as Bool:
             return boolValue == other
-        case let other as NSNumber:
-            return compare(other) == .orderedSame
         default:
             return false
         }
@@ -645,7 +662,12 @@ open class NSNumber : NSValue {
         case kCFNumberFloat64Type:
             return doubleValue
         case kCFNumberSInt128Type:
-            return int128Value
+            // If the high portion is 0, return just the low portion as a UInt64, which reasonably fixes trying to roundtrip UInt.max and UInt64.max.
+            if int128Value.high == 0 {
+                return int128Value.low
+            } else {
+                return int128Value                
+            }
         default:
             fatalError("unsupported CFNumberType: '\(numberType)'")
         }
@@ -657,7 +679,7 @@ open class NSNumber : NSValue {
     
     private convenience init(bytes: UnsafeRawPointer, numberType: CFNumberType) {
         let cfnumber = CFNumberCreate(nil, numberType, bytes)
-        self.init(factory: { unsafeBitCast(cfnumber, to: NSNumber.self) })
+        self.init(factory: { cast(unsafeBitCast(cfnumber, to: NSNumber.self)) })
     }
     
     public convenience init(value: Int8) {
@@ -740,7 +762,7 @@ open class NSNumber : NSValue {
     }
 
     public convenience init(value: Bool) {
-        self.init(factory: value._bridgeToObjectiveC)
+        self.init(factory: cast(value._bridgeToObjectiveC))
     }
 
     override internal init() {
@@ -897,7 +919,7 @@ open class NSNumber : NSValue {
     }
     
     open var stringValue: String {
-        return description(withLocale: nil)
+        return self.description
     }
     
     /// Create an instance initialized to `value`.
@@ -940,29 +962,47 @@ open class NSNumber : NSValue {
         }
     }
 
-    private static let _numberFormatterForNilLocale: CFNumberFormatter = {
-        let formatter: CFNumberFormatter
-        formatter = CFNumberFormatterCreate(nil, CFLocaleCopyCurrent(), kCFNumberFormatterNoStyle)
-        CFNumberFormatterSetProperty(formatter, kCFNumberFormatterMaxFractionDigits, 15._bridgeToObjectiveC())
-        return formatter
-    }()
-
     open func description(withLocale locale: Locale?) -> String {
-        // CFNumberFormatterCreateStringWithNumber() does not like numbers of type
-        // SInt128Type, as it loses the type when looking it up and treats it as
-        // an SInt64Type, so special case them.
-        if _CFNumberGetType2(_cfObject) == kCFNumberSInt128Type {
-            return String(format: "%@", unsafeBitCast(_cfObject, to: UnsafePointer<CFNumber>.self))
-        }
+        guard let locale = locale else { return self.description }
+        switch _CFNumberGetType2(_cfObject) {
+        case kCFNumberSInt8Type, kCFNumberCharType:
+            return String(format: "%d", locale: locale, self.int8Value)
 
-        let aLocale = locale
-        let formatter: CFNumberFormatter
-        if (aLocale == nil) {
-            formatter = NSNumber._numberFormatterForNilLocale
-        } else {
-            formatter = CFNumberFormatterCreate(nil, aLocale?._cfObject, kCFNumberFormatterDecimalStyle)
+        case kCFNumberSInt16Type, kCFNumberShortType:
+            return String(format: "%hi", locale: locale, self.int16Value)
+
+        case kCFNumberSInt32Type:
+            return String(format: "%d", locale: locale, self.int32Value)
+
+        case kCFNumberIntType, kCFNumberLongType, kCFNumberNSIntegerType, kCFNumberCFIndexType:
+            return String(format: "%ld", locale: locale, self.intValue)
+
+        case kCFNumberSInt64Type, kCFNumberLongLongType:
+            return String(format: "%lld", locale: locale, self.int64Value)
+
+        case kCFNumberSInt128Type:
+            let value = self.int128Value
+            if value.high == 0 {
+                return value.low.description    // BUG: "%llu" doesnt work correctly and treats number as signed
+            } else {
+                // BUG: Note the locale is actually ignored here as this is converted using CFNumber.c:emit128()
+                return String(format: "%@", locale: locale, unsafeBitCast(_cfObject, to: UnsafePointer<CFNumber>.self))
+            }
+
+        case kCFNumberFloatType, kCFNumberFloat32Type:
+            return String(format: "%0.7g", locale: locale, self.floatValue)
+
+        case kCFNumberFloat64Type, kCFNumberDoubleType:
+            return String(format: "%0.16g", locale: locale, self.doubleValue)
+
+        case kCFNumberCGFloatType:
+            if Int.max == Int32.max {
+                return String(format: "%0.7g", locale: locale, self.floatValue)
+            } else {
+                return String(format: "%0.16g", locale: locale, self.doubleValue)
+            }
+        default: fatalError("Unknown NSNumber Type")
         }
-        return CFNumberFormatterCreateStringWithNumber(nil, formatter, self._cfObject)._swiftObject
     }
     
     override open var _cfTypeID: CFTypeID {
@@ -970,9 +1010,38 @@ open class NSNumber : NSValue {
     }
     
     open override var description: String {
-        return description(withLocale: nil)
+        switch _CFNumberGetType2(_cfObject) {
+        case kCFNumberSInt8Type, kCFNumberCharType, kCFNumberSInt16Type, kCFNumberShortType,
+             kCFNumberSInt32Type, kCFNumberIntType, kCFNumberLongType, kCFNumberNSIntegerType, kCFNumberCFIndexType:
+            return self.intValue.description
+
+        case kCFNumberSInt64Type, kCFNumberLongLongType:
+            return self.int64Value.description
+
+        case kCFNumberSInt128Type:
+            let value = self.int128Value
+            if value.high == 0 {
+                return value.low.description
+            } else {
+                return String(format: "%@", locale: nil, unsafeBitCast(_cfObject, to: UnsafePointer<CFNumber>.self))
+            }
+
+        case kCFNumberFloatType, kCFNumberFloat32Type:
+            return self.floatValue.description
+
+        case kCFNumberFloat64Type, kCFNumberDoubleType:
+            return self.doubleValue.description
+
+        case kCFNumberCGFloatType:
+            if Int.max == Int32.max {
+                return self.floatValue.description
+            } else {
+                return self.doubleValue.description
+            }
+        default: fatalError("Unknown NSNumber Type")
+        }
     }
-    
+
     internal func _cfNumberType() -> CFNumberType {
         switch objCType.pointee {
         case 0x42: return kCFNumberCharType
@@ -1077,3 +1146,9 @@ internal func _CFSwiftNumberGetValue(_ obj: CFTypeRef, _ valuePtr: UnsafeMutable
 internal func _CFSwiftNumberGetBoolValue(_ obj: CFTypeRef) -> Bool {
     return unsafeBitCast(obj, to: NSNumber.self).boolValue
 }
+
+protocol _NSNumberCastingWithoutBridging {
+  var _swiftValueOfOptimalType: Any { get }
+}
+
+extension NSNumber: _NSNumberCastingWithoutBridging {}

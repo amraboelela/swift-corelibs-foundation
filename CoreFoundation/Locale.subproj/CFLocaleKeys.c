@@ -1,7 +1,7 @@
 /*	CFLocaleKeys.c
-	Copyright (c) 2008-2017, Apple Inc. and the Swift project authors
+	Copyright (c) 2008-2018, Apple Inc. and the Swift project authors
  
-	Portions Copyright (c) 2014-2017, Apple Inc. and the Swift project authors
+	Portions Copyright (c) 2014-2018, Apple Inc. and the Swift project authors
 	Licensed under Apache License v2.0 with Runtime Library Exception
 	See http://swift.org/LICENSE.txt for license information
 	See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
@@ -133,7 +133,7 @@ CONST_STRING_DECL(kCFCalendarIdentifierEthiopicAmeteMihret, "ethiopic");
 CONST_STRING_DECL(kCFCalendarIdentifierEthiopicAmeteAlem, "ethiopic-amete-alem");
 
 // Aliases for Linux
-#if DEPLOYMENT_TARGET_LINUX
+#if DEPLOYMENT_TARGET_LINUX || DEPLOYMENT_TARGET_WINDOWS
 
 CF_EXPORT CFStringRef const kCFBuddhistCalendar __attribute__((alias ("kCFCalendarIdentifierBuddhist")));
 CF_EXPORT CFStringRef const kCFChineseCalendar __attribute__((alias ("kCFCalendarIdentifierChinese")));
